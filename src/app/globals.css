@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+  --background: #111214;
+  --foreground: #f2f3f4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+button:not(:disabled), select { cursor: pointer; }
+button:focus-visible, a:focus-visible, select:focus-visible {
+  outline: 2px solid #8be2b2;
+  outline-offset: 4px;
+}
+
+.market-skeleton {
+  background: linear-gradient(100deg, transparent 20%, rgba(174,209,192,.04) 45%, transparent 70%);
+  background-size: 200% 100%;
+  animation: market-shimmer 1.8s ease-in-out infinite;
+}
+@keyframes market-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(103, 223, 156, 0.24);
+  color: #ffffff;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #36383b #111214;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #111214;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 3px solid #111214;
+  border-radius: 999px;
+  background: #36383b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    color-scheme: light;
+  }
+
+  .no-print,
+  .receipt-actions,
+  aside,
+  nav {
+    display: none !important;
+  }
+
+  .receipt-page {
+    display: block !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .receipt-sheet {
+    border: 1px solid #dedede !important;
+    border-radius: 22px !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    color: #111111 !important;
+  }
+
+  .receipt-sheet * {
+    text-shadow: none !important;
+  }
+
+  .receipt-sheet p,
+  .receipt-sheet dt,
+  .receipt-sheet dd,
+  .receipt-sheet h1 {
+    color: #111111 !important;
+  }
+}
