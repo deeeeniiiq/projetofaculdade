@@ -1,7 +1,5 @@
-create extension if not exists "uuid-ossp";
-
 create table if not exists public.transacoes (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   descricao text not null check (char_length(descricao) between 2 and 80),
   valor numeric(12, 2) not null check (valor > 0),
   tipo text not null check (tipo in ('receita', 'despesa')),
