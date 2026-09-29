@@ -56,13 +56,20 @@ Abra `http://localhost:3000`. Sem `.env.local`, a aplicação entra automaticame
 
 ## Conectar ao Supabase
 
-1. Crie um projeto no Supabase.
-2. Abra o **SQL Editor** e execute `supabase/schema.sql`.
-3. Copie `.env.example` para `.env.local`.
-4. Preencha `SUPABASE_URL` e `SUPABASE_ANON_KEY` com os dados do projeto.
-5. Reinicie `npm run dev`.
+O Supabase funciona como banco/backend desta aplicação. O frontend Next.js deve ser publicado em um host como a Vercel; não existe envio de um APK para o Supabase neste projeto web.
 
-Quando as duas variáveis estão definidas, a camada `src/lib/transactions.ts` usa o Supabase automaticamente.
+1. Crie um projeto chamado `projetofaculdade` no Supabase.
+2. No terminal, execute `npx supabase login` e conclua o login no navegador.
+3. No painel do Supabase, copie o **Project Ref** em **Project Settings > General**.
+4. Vincule o projeto local com `npx supabase link --project-ref SEU_PROJECT_REF`.
+5. Envie a migration com `npx supabase db push`. A migration inicial está em `supabase/migrations/20260929185757_initial_schema.sql`.
+6. Copie `.env.example` para `.env.local`.
+7. No painel do Supabase, abra o diálogo **Connect** ou **Settings > API Keys** e preencha `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` no `.env.local`.
+8. Reinicie `npm run dev`.
+
+Como alternativa ao CLI, abra o **SQL Editor** do Supabase e execute `supabase/schema.sql` manualmente.
+
+Quando as duas variáveis estão definidas, a camada `src/lib/transactions.ts` usa o Supabase automaticamente. Chaves `SUPABASE_ANON_KEY` antigas continuam aceitas por compatibilidade.
 
 ## Fluxo de uma nova transação
 
@@ -75,6 +82,6 @@ Quando as duas variáveis estão definidas, a camada `src/lib/transactions.ts` u
 
 ## Deploy na Vercel
 
-Suba o repositório para o GitHub, importe o projeto na Vercel e configure `SUPABASE_URL` e `SUPABASE_ANON_KEY` em **Environment Variables**. O arquivo `.env.local` nunca deve ser versionado.
+Suba o repositório para o GitHub, importe o projeto na Vercel e configure `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` em **Environment Variables**. O arquivo `.env.local` nunca deve ser versionado.
 
 > O fallback local existe apenas para facilitar demonstração e correção sem credenciais. No deploy, configure o Supabase.
