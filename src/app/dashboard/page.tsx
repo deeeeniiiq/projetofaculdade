@@ -3,6 +3,8 @@ import { getTransactions, isDemoMode } from "@/lib/transactions";
 
 export const dynamic = "force-dynamic";
 
+const INITIAL_BALANCE = 20487.63;
+
 export default async function DashboardPage() {
   const transactions = await getTransactions();
   const income = transactions
@@ -17,7 +19,7 @@ export default async function DashboardPage() {
       transactions={transactions}
       income={income}
       expenses={expenses}
-      balance={income - expenses}
+      balance={INITIAL_BALANCE + income - expenses}
       demoMode={isDemoMode()}
     />
   );
