@@ -6,6 +6,7 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
 import { TransactionList } from "@/components/transaction-list";
 import type { Transaction } from "@/types/transaction";
+import { cashMovementCents } from "@/lib/card";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -19,7 +20,7 @@ export function ActivityExplorer({ transactions }: { transactions: Transaction[]
     const haystack = normalize([t.descricao, t.destinatario, t.identificador, t.mensagem, t.categoria, t.metodo].filter(Boolean).join(" "));
     return (filter === "all" || t.tipo === filter) && haystack.includes(normalize(query.trim())) && new Date(t.criado_em).getTime() >= cutoff;
   }), [transactions, query, filter, cutoff]);
-  const net = filtered.reduce((sum,t) => sum + Math.round(t.valor * 100) * (t.tipo === "receita" ? 1 : -1), 0) / 100;
+  const net = filtered.reduce((sum, transaction) => sum + cashMovementCents(transaction), 0) / 100;
 
   function exportCsv() {
     const params = new URLSearchParams({ q: query, type: filter, since: String(cutoff) });
@@ -38,7 +39,7 @@ export function ActivityExplorer({ transactions }: { transactions: Transaction[]
         <select aria-label="Período do histórico" value={period} onChange={e=>{setPeriod(e.target.value);setCutoff(e.target.value==="all" ? 0 : Date.now()-Number(e.target.value)*86400000);setLimit(20);}} className="h-9 rounded-lg bg-[#252729] px-2 text-[11px] text-white/65"><option value="all">Todo o período</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option></select>
       </div>
       <div className="flex items-center justify-between gap-2 border-t border-white/5 pt-3">
-        <p aria-live="polite" className="text-[11px] text-white/45">{filtered.length} {filtered.length === 1 ? "registro" : "registros"} · <motion.span key={net} initial={{opacity:0}} animate={{opacity:1}} className={net>=0?"text-[#8be8b2]":"text-[#ff9da8]"}>{money.format(net)}</motion.span></p>
+        <p aria-live="polite" className="text-[11px] text-white/45">{filtered.length} {filtered.length === 1 ? "registro" : "registros"} · saldo <motion.span key={net} initial={{opacity:0}} animate={{opacity:1}} className={net>=0?"text-[#8be8b2]":"text-[#ff9da8]"}>{money.format(net)}</motion.span></p>
         <button type="button" disabled={!filtered.length} onClick={exportCsv} className="flex items-center gap-1 text-[11px] text-white/60 disabled:opacity-30"><FileDownloadRoundedIcon sx={{fontSize:16}} />CSV</button>
       </div>
     </div>

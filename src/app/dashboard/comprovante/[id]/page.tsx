@@ -8,6 +8,7 @@ import QRCode from "qrcode";
 import { ReceiptActions } from "@/components/receipt-actions";
 import { getTransactionDetails } from "@/lib/transaction-details";
 import { getTransactionById } from "@/lib/transactions";
+import { CARD_BILL_METHOD, CARD_PURCHASE_METHOD } from "@/lib/card";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,8 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
   const details = getTransactionDetails(transaction);
   const receiptCode = `SLD-${transaction.id.replaceAll("-", "").slice(0, 12).toUpperCase()}`;
   const isIncome = transaction.tipo === "receita";
+  const backHref = transaction.metodo === CARD_PURCHASE_METHOD || transaction.metodo === CARD_BILL_METHOD
+    ? "/dashboard/cartao" : "/dashboard";
   const receiptQr = await QRCode.toDataURL(
     JSON.stringify({
       type: "saldo-receipt",
@@ -53,7 +56,7 @@ export default async function ReceiptPage({ params }: ReceiptPageProps) {
       <div className="pointer-events-none fixed inset-x-0 top-0 h-[360px] bg-[radial-gradient(ellipse_90%_65%_at_50%_-12%,rgba(29,82,58,0.28),rgba(17,18,20,0)_70%)]" />
       <div className="relative mx-auto w-full max-w-[620px] px-4 pb-16 pt-5 sm:px-6 sm:pt-8">
         <Link
-          href="/dashboard"
+          href={backHref}
           className="no-print inline-flex h-10 w-10 items-center justify-center rounded-full text-[#b8b9bc] transition hover:bg-white/[0.05] hover:text-white"
           aria-label="Voltar ao painel"
         >

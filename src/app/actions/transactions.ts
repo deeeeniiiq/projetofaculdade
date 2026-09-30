@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { addTransaction, getTransactions, getTransactionById } from "@/lib/transactions";
 import { destinationError, INITIAL_BALANCE } from "@/lib/transfer";
+import { cashBalanceCents } from "@/lib/card";
 import type { Transaction, TransactionType } from "@/types/transaction";
 
 export type TransactionActionState = {
@@ -62,7 +63,7 @@ export async function sendTransfer(
       return { ok: true, transaction: existing };
     }
     const current = await getTransactions();
-    const availableCents = Math.round(INITIAL_BALANCE * 100) + current.reduce((total, item) => total + Math.round(item.valor * 100) * (item.tipo === "receita" ? 1 : -1), 0);
+    const availableCents = cashBalanceCents(current, INITIAL_BALANCE);
     if (Math.round(amount * 100) > availableCents) return { ok: false, error: "Saldo atualizado insuficiente. Revise o valor." };
     const transaction = await addTransaction({
       descricao: recipient.slice(0, 80),

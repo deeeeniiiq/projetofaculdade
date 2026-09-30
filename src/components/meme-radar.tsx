@@ -163,14 +163,14 @@ export function MemeRadar({ compact = false }: { compact?: boolean }) {
     <section className={compact ? "min-w-0" : "mx-auto max-w-[1180px] px-4 py-6 pb-28 sm:px-7 sm:py-8 lg:px-8 lg:pb-12"} aria-label="Radar de tokens da Solana">
       {compact ? (
         <div className="mb-3 flex items-end justify-between px-1">
-          <div><p className="text-[10px] font-bold uppercase tracking-[0.17em] text-white/45">Explorar Solana</p><h2 className="mt-1 text-[17px] font-semibold tracking-[-0.035em] text-[#f1f4f2]">Tokens em destaque</h2></div>
+          <div><h2 className="text-[17px] font-semibold tracking-[-0.035em] text-[#f1f4f2]">Tokens em destaque</h2></div>
           <Link href="/dashboard/memes" className="flex items-center gap-0.5 text-[10px] font-semibold text-[#bfb3f2] transition hover:text-[#ded7ff]">Ver todos <ArrowOutwardRoundedIcon sx={{ fontSize: 14 }} /></Link>
         </div>
       ) : (
         <header className="mb-7">
           <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-[11px] text-[#8c9892] transition hover:text-white"><ArrowBackRoundedIcon sx={{ fontSize: 15 }} />Sua carteira</Link>
           <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-            <div><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a9a1d4]"><span className="h-1.5 w-1.5 rounded-full bg-[#6fdb9b]" />SOLANA / AO VIVO</div><h1 className="mt-2 text-[36px] font-semibold leading-none tracking-[-0.065em] sm:text-[48px]">Explorar Solana<span className="text-[#b9aaf5]">.</span></h1><p className="mt-3 max-w-[560px] text-xs leading-5 text-[#8a9690]">Preços, liquidez e atividade dos tokens em destaque na rede.</p></div>
+            <div><h1 className="text-[36px] font-semibold leading-none tracking-[-0.065em] sm:text-[48px]">Explorar Solana<span className="text-[#b9aaf5]">.</span></h1><p className="mt-3 max-w-[560px] text-xs leading-5 text-[#8a9690]">Preços, liquidez e atividade dos tokens em destaque na rede.</p></div>
             <button type="button" onClick={() => void refresh()} disabled={refreshing} className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.045] px-3 text-[11px] font-semibold text-[#d4ded7] transition hover:bg-white/[0.08] disabled:opacity-50"><RefreshRoundedIcon sx={{ fontSize: 17 }} className={refreshing ? "animate-spin" : ""} />Atualizar</button>
           </div>
         </header>

@@ -7,6 +7,7 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
+import CreditCardRoundedIcon from "@mui/icons-material/CreditCardRounded";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -16,8 +17,10 @@ const navItems = [
   { href: "/dashboard", label: "Início", icon: HomeRoundedIcon, exact: true },
   { href: "/dashboard/crypto", label: "Cripto", icon: CurrencyBitcoinRoundedIcon },
   { href: "/dashboard/memes", label: "Explorar", icon: LocalFireDepartmentRoundedIcon },
+  { href: "/dashboard/cartao", label: "Cartão", icon: CreditCardRoundedIcon },
   { href: "/dashboard/nova-transacao", label: "Adicionar", icon: AddRoundedIcon },
 ];
+const mobileNavItems = navItems.filter((item) => item.href !== "/dashboard/crypto");
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -76,8 +79,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <main className={`min-w-0 ${walletHome ? "pb-0" : "pb-24 lg:pb-0"}`}>{children}</main>
 
-          <nav className={`${walletHome ? "hidden" : "fixed inset-x-3 bottom-3 z-40 flex h-16 items-center justify-around rounded-[22px] border border-white/[0.07] bg-[#191a1c]/94 px-2 shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden"}`}>
-            {navItems.map((item) => {
+          <motion.nav initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42, duration: 0.58, ease: [0.22, 1, 0.36, 1] }} className="fixed inset-x-3 bottom-3 z-40 flex h-16 items-center justify-around rounded-[22px] border border-white/[0.07] bg-[#191a1c]/94 px-2 shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden">
+            {mobileNavItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href, item.exact);
               return (
@@ -92,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <LockRoundedIcon sx={{ fontSize: 20 }} />
               Bloquear
             </button>
-          </nav>
+          </motion.nav>
         </div>
       </div>
     </WalletLock>

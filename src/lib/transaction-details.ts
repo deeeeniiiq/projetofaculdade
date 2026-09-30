@@ -73,7 +73,7 @@ export function getTransactionDetails(transaction: Transaction): TransactionDeta
   if (transaction.destinatario || transaction.identificador || transaction.metodo) {
     return {
       counterparty: transaction.destinatario || transaction.descricao,
-      identityLabel: transaction.metodo === "PIX" ? "Chave PIX" : "Destino",
+      identityLabel: transaction.metodo === "PIX" ? "Chave PIX" : transaction.metodo?.includes("Cartão") || transaction.metodo === "Pagamento de fatura" ? "Cartão" : "Destino",
       identity: transaction.identificador || "Dados não informados",
       method: transaction.metodo || "Transferência",
       category: transaction.categoria || "Transferência",

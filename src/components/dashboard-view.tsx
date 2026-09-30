@@ -14,6 +14,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import CollectionsRoundedIcon from "@mui/icons-material/CollectionsRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import CardGiftcardRoundedIcon from "@mui/icons-material/CardGiftcardRounded";
+import CreditCardRoundedIcon from "@mui/icons-material/CreditCardRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
@@ -43,6 +44,7 @@ import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useId, useMemo, useRef, useState } from "react";
 import { destinationError, destinationKey, parseBRL, splitBRL } from "@/lib/transfer";
 import { estimatePortfolioDayChange } from "@/lib/market";
+import { cardStatement } from "@/lib/card";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import CallSplitRoundedIcon from "@mui/icons-material/CallSplitRounded";
 import { ActivityExplorer } from "@/components/activity-explorer";
@@ -264,6 +266,7 @@ export function DashboardView({
     accounts.find((item) => item.id === selectedAccountId) ?? accounts[0];
 
   const accountBalance = balance * account.multiplier;
+  const cardSummary = cardStatement(transactions);
   const sendNumericAmount = parseBRL(sendAmount);
   const postSendBalance = Math.max(accountBalance - sendNumericAmount, 0);
   const sendImpactPercent = Math.min(
@@ -686,9 +689,9 @@ export function DashboardView({
         </motion.header>
 
         <motion.section
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08, duration: 0.56, ease }}
+          initial={{ opacity: 0, y: 18, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.08, duration: 0.7, ease }}
           className="relative isolate mt-7 px-1 pb-8 pt-10 text-center sm:mt-9 sm:pb-9 sm:pt-12"
         >
           <motion.div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[-188px] h-[490px] w-[160vw] max-w-[1300px] -translate-x-1/2 sm:top-[-215px] sm:h-[540px]" style={{ backgroundImage: positiveBalanceBackground }} initial={false} animate={{ opacity: positive ? 1 : 0 }} transition={{ duration: 0.8, ease }} />
@@ -753,12 +756,15 @@ export function DashboardView({
           transition={{ delay: 0.16, duration: 0.56, ease }}
           className="mt-3 grid grid-cols-3 gap-2.5 sm:gap-3"
         >
-          {quickActions.map((action) => {
+          {quickActions.map((action, index) => {
             const Icon = action.icon;
             return (
               <motion.button
                 key={action.id}
                 type="button"
+                initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.21 + index * 0.065, duration: 0.5, ease }}
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => openAction(action.id)}
@@ -781,7 +787,15 @@ export function DashboardView({
           <Link href="/dashboard/memes" className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/[0.055] bg-[#1d1f22] px-3 text-[10px] font-semibold text-[#bfc0c6] transition hover:bg-[#292b30]"><LocalFireDepartmentRoundedIcon sx={{ fontSize: 15 }} />Explorar</Link>
         </div>
 
-        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.48, ease }} className="mt-5" aria-label="Acesso ao histórico">
+        <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32, duration: 0.54, ease }} className="mt-6" aria-label="Acesso ao cartão">
+          <Link href="/dashboard/cartao" className="group flex min-h-[82px] items-center gap-3.5 rounded-[18px] border border-white/[0.05] bg-[#25272b] px-3.5 py-3 transition-colors hover:bg-[#2e3035]">
+            <span className="grid h-12 w-[68px] shrink-0 place-items-center rounded-[12px] border border-white/[0.1] bg-[linear-gradient(135deg,#45404e,#1d1f24)] text-[#c5b8fb]"><CreditCardRoundedIcon sx={{ fontSize: 25 }} /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[12px] font-semibold text-[#ededef]">Cartão de crédito</span><span className="mt-1 block text-[10px] text-white/45">Fatura {currency.format(cardSummary.outstandingCents / 100)} ·•••• 2048</span></span>
+            <ArrowOutwardRoundedIcon sx={{ fontSize: 18 }} className="shrink-0 text-white/45 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+          </Link>
+        </motion.section>
+
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.48, ease }} className="mt-2.5" aria-label="Acesso ao histórico">
           <button type="button" onClick={() => selectTab("activity")} className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#25272b] px-4 py-3 text-left transition-colors hover:bg-[#2e3035]">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.065] text-[#c4c6ca]"><HistoryRoundedIcon sx={{ fontSize: 19 }} /></span>
             <span className="min-w-0 flex-1"><span className="block text-[12px] font-semibold text-[#e6e7e9]">Transações</span><span className="mt-0.5 block text-[10px] text-[#9b9ea4]">{transactions.length} registros no histórico</span></span>
@@ -793,7 +807,7 @@ export function DashboardView({
           id="wallet-content"
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.23, duration: 0.58, ease }}
+          transition={{ delay: 0.45, duration: 0.58, ease }}
           className="mt-6 grid grid-cols-4 gap-1 rounded-[18px] border border-white/[0.045] bg-[#17191c] p-1.5"
         >
           {dashboardTabs.map((tab) => {

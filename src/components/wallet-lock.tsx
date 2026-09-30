@@ -126,9 +126,9 @@ export function WalletLock({ children }: { children: ReactNode }) {
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, scale: 0.995 }}
-        animate={{ opacity: state === "open" ? 1 : state === "loading" ? 0 : 0.72, scale: 1 }}
-        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        initial={{ opacity: 0, scale: 0.985, y: 12 }}
+        animate={{ opacity: state === "open" ? 1 : state === "loading" ? 0 : 0.72, scale: state === "open" ? 1 : 0.985, y: state === "open" ? 0 : 12 }}
+        transition={{ duration: 0.68, ease: [0.22, 1, 0.36, 1] }}
       >
         {children}
       </motion.div>
