@@ -4,6 +4,7 @@ import { motion, MotionConfig } from "framer-motion";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import CurrencyBitcoinRoundedIcon from "@mui/icons-material/CurrencyBitcoinRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
 import Link from "next/link";
@@ -14,6 +15,7 @@ import { WalletLock } from "@/components/wallet-lock";
 const navItems = [
   { href: "/dashboard", label: "Início", icon: HomeRoundedIcon, exact: true },
   { href: "/dashboard/crypto", label: "Cripto", icon: CurrencyBitcoinRoundedIcon },
+  { href: "/dashboard/memes", label: "Radar", icon: LocalFireDepartmentRoundedIcon },
   { href: "/dashboard/nova-transacao", label: "Adicionar", icon: AddRoundedIcon },
 ];
 
@@ -79,14 +81,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               const Icon = item.icon;
               const active = isActive(item.href, item.exact);
               return (
-                <Link key={item.href} href={item.href} className={`relative flex h-12 min-w-20 flex-col items-center justify-center gap-0.5 rounded-2xl text-[10px] font-semibold transition ${active ? "text-white" : "text-[#727478]"}`}>
+                <Link key={item.href} href={item.href} className={`relative flex h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl text-[10px] font-semibold transition ${active ? "text-white" : "text-[#727478]"}`}>
                   {active && <motion.div layoutId="mobile-active" className="absolute inset-0 rounded-2xl bg-white/[0.07]" />}
                   <Icon className="relative" sx={{ fontSize: 21 }} />
                   <span className="relative">{item.label}</span>
                 </Link>
               );
             })}
-            <button onClick={lockNow} className="flex h-12 min-w-16 flex-col items-center justify-center gap-0.5 rounded-2xl text-[10px] font-semibold text-[#696b70]">
+            <button onClick={lockNow} className="flex h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl text-[10px] font-semibold text-[#696b70]">
               <LockRoundedIcon sx={{ fontSize: 20 }} />
               Bloquear
             </button>

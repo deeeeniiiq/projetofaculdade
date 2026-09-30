@@ -15,6 +15,7 @@ import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import CardGiftcardRoundedIcon from "@mui/icons-material/CardGiftcardRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
+import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
@@ -47,6 +48,7 @@ import { sendTransfer } from "@/app/actions/transactions";
 
 import { CoinIcon } from "@/components/coin-icon";
 import { CryptoMarket } from "@/components/crypto-market";
+import { MemeRadar } from "@/components/meme-radar";
 import { TradePanel } from "@/components/trade-panel";
 import { useMarket } from "@/components/use-market";
 import type { Transaction } from "@/types/transaction";
@@ -69,7 +71,7 @@ type DashboardViewProps = {
 };
 
 type ModalKind = "receive" | "send" | "swap" | "buy" | null;
-type DashboardTab = "tokens" | "nfts" | "activity" | "insights";
+type DashboardTab = "tokens" | "memes" | "nfts" | "activity" | "insights";
 type SendStep = "compose" | "review" | "processing" | "success";
 type SendMethod = "PIX" | "Carteira";
 type SendCategory = "Transferência" | "Alimentação" | "Moradia" | "Presente";
@@ -110,17 +112,16 @@ const accounts = [
 ] as const;
 
 const quickActions = [
-  { id: "receive", label: "Receber", icon: QrCodeScannerRoundedIcon },
   { id: "send", label: "Enviar", icon: ArrowOutwardRoundedIcon },
-  { id: "swap", label: "Swap", icon: SwapVertRoundedIcon },
+  { id: "receive", label: "Receber", icon: QrCodeScannerRoundedIcon },
   { id: "buy", label: "Comprar", icon: AddCardRoundedIcon },
 ] as const;
 
 const dashboardTabs = [
   { id: "tokens", label: "Tokens", icon: GridViewRoundedIcon },
+  { id: "memes", label: "Radar", icon: LocalFireDepartmentRoundedIcon },
   { id: "nfts", label: "NFTs", icon: CollectionsRoundedIcon },
   { id: "activity", label: "Atividade", icon: HistoryRoundedIcon },
-  { id: "insights", label: "Insights", icon: InsightsRoundedIcon },
 ] as const;
 
 const demoNfts = [
@@ -532,6 +533,7 @@ export function DashboardView({
     { label: "Enviar", detail: "Preparar uma transferência", keywords: "enviar transferencia", action: () => openAction("send") },
     { label: "Swap", detail: "Trocar SOL e USDC", keywords: "swap trocar sol usdc", action: () => setModal("swap") },
     { label: "Tokens", detail: "Ver SOL e USDC", keywords: "tokens ativos solana usdc", action: () => selectTab("tokens") },
+    { label: "Radar Solana", detail: "Tokens em movimento ao vivo", keywords: "memes memecoins axiom dexscreener radar", action: () => selectTab("memes") },
     { label: "NFTs", detail: "Abrir colecionáveis", keywords: "nft colecao colecionaveis", action: () => selectTab("nfts") },
     { label: "Atividade", detail: "Ver pagamentos e recebimentos", keywords: "atividade transacoes pagamentos", action: () => selectTab("activity") },
     { label: "Insights", detail: "Ver distribuição e fluxo", keywords: "insights carteira portfolio", action: () => selectTab("insights") },
@@ -737,7 +739,7 @@ export function DashboardView({
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.16, duration: 0.56, ease }}
-          className="mt-10 grid grid-cols-4 gap-2 sm:gap-3"
+          className="mt-10 grid grid-cols-3 gap-2.5 sm:gap-3"
         >
           {quickActions.map((action) => {
             const Icon = action.icon;
@@ -748,11 +750,11 @@ export function DashboardView({
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => openAction(action.id)}
-                className="group flex min-h-[84px] min-w-0 flex-col items-center justify-center gap-2 rounded-[18px] border border-white/[0.05] bg-[#222527]/92 px-1.5 shadow-[0_8px_30px_rgba(0,0,0,.1)] transition hover:border-white/[0.1] hover:bg-[#2c3031] sm:min-h-[92px] sm:rounded-[20px]"
+                className="group flex min-h-[96px] min-w-0 flex-col items-center justify-center gap-2 rounded-[19px] border border-white/[0.05] bg-[#2a2d30]/95 px-1.5 shadow-[0_8px_30px_rgba(0,0,0,.12)] transition hover:border-white/[0.1] hover:bg-[#33373a] sm:min-h-[106px] sm:rounded-[22px]"
               >
                 <Icon
                   sx={{ fontSize: { xs: 24, sm: 27 } }}
-                  className="text-[#d8dadd] transition-transform duration-300 group-hover:scale-105"
+                  className="text-[#b7a9f1] transition-transform duration-300 group-hover:scale-110"
                 />
                 <span className="text-[10px] font-semibold text-[#c9cacc] sm:text-[11px]">
                   {action.label}
@@ -761,6 +763,11 @@ export function DashboardView({
             );
           })}
         </motion.section>
+
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <button type="button" onClick={() => setModal("swap")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/[0.055] bg-white/[0.04] px-3 text-[10px] font-semibold text-[#b6c5ba] transition hover:bg-white/[0.08]"><SwapVertRoundedIcon sx={{ fontSize: 17 }} />Trocar moedas</button>
+          <Link href="/dashboard/memes" className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/[0.055] bg-white/[0.04] px-3 text-[10px] font-semibold text-[#b6c5ba] transition hover:bg-white/[0.08]"><LocalFireDepartmentRoundedIcon sx={{ fontSize: 15 }} />Radar ao vivo</Link>
+        </div>
 
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.48, ease }} className="mt-4 grid grid-cols-2 gap-2" aria-label="Resumo rápido">
           <button type="button" onClick={() => selectTab("insights")} className="flex min-w-0 items-center gap-2.5 rounded-[16px] border border-white/[0.045] bg-white/[0.035] px-3 py-3 text-left transition hover:bg-white/[0.065] sm:px-4">
@@ -848,6 +855,7 @@ export function DashboardView({
                   </motion.div>
                 );
               })}
+              <div className="pt-5"><MemeRadar compact /></div>
               <div className="my-4 grid grid-cols-2 gap-2">
                 <button type="button" onClick={()=>selectTab("activity")} className="group rounded-[18px] border border-white/[0.055] bg-white/[0.025] p-4 text-left transition hover:bg-white/[0.05]">
                   <HistoryRoundedIcon sx={{fontSize:19}} className="text-[#9ad7bc]" />
@@ -859,6 +867,13 @@ export function DashboardView({
                 </Link>
               </div>
               <CryptoMarket embedded />
+            </motion.section>
+          )}
+
+          {dashboardTab === "memes" && (
+            <motion.section key="memes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.28, ease }} className="mt-5">
+              <MemeRadar compact />
+              <Link href="/dashboard/memes" className="mt-3 flex h-10 items-center justify-center gap-1 rounded-xl border border-white/[0.055] bg-white/[0.045] text-[11px] font-semibold text-[#c9dacf] transition hover:bg-white/[0.08]">Abrir radar completo <ArrowOutwardRoundedIcon sx={{ fontSize: 15 }} /></Link>
             </motion.section>
           )}
 
