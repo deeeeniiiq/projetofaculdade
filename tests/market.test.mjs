@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { convertAmount, isQuoteFresh, parseAmount } from "../src/lib/market.ts";
+import { convertAmount, estimatePortfolioDayChange, isQuoteFresh, parseAmount } from "../src/lib/market.ts";
 
 test("BRL decimal input accepts comma and rejects malformed or non-positive values", () => {
   assert.equal(parseAmount("250,50"), 250.5);
@@ -32,4 +32,19 @@ test("review rejects expired quotes and invalid timestamps", () => {
   assert.equal(isQuoteFresh(NaN, now), false);
   assert.equal(isQuoteFresh(0, now), false);
   assert.equal(isQuoteFresh(now + 60_000, now), false);
+});
+
+test("portfolio 24h change follows market prices, including losses, instead of cash flow", () => {
+  const gain = estimatePortfolioDayChange([{ value: 110, changePercent: 10 }, { value: 100, changePercent: 0 }]);
+  assert.ok(gain);
+  assert.equal(gain.amount, 10);
+  assert.equal(gain.percent, 5);
+
+  const loss = estimatePortfolioDayChange([{ value: 90, changePercent: -10 }, { value: 100, changePercent: 0 }]);
+  assert.ok(loss);
+  assert.equal(loss.amount, -10);
+  assert.equal(loss.percent, -5);
+
+  assert.equal(estimatePortfolioDayChange([{ value: 100, changePercent: -100 }]), null);
+  assert.equal(estimatePortfolioDayChange([{ value: 100, changePercent: Number.NaN }]), null);
 });

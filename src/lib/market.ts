@@ -57,6 +57,15 @@ export function formatQuantity(value: number) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 8 }).format(value);
 }
 
+export function estimatePortfolioDayChange(positions: readonly { value: number; changePercent: number }[]) {
+  if (positions.length === 0 || positions.some(({ value, changePercent }) => !Number.isFinite(value) || value < 0 || !Number.isFinite(changePercent) || changePercent <= -100)) return null;
+  const current = positions.reduce((sum, position) => sum + position.value, 0);
+  const previous = positions.reduce((sum, position) => sum + position.value / (1 + position.changePercent / 100), 0);
+  if (!Number.isFinite(previous) || previous < 0) return null;
+  if (previous === 0) return { amount: 0, percent: 0 };
+  return { amount: current - previous, percent: (current - previous) / previous * 100 };
+}
+
 export function parseAmount(value: string) {
   const normalized = value.trim().replace(",", ".");
   if (!/^\d+(?:\.\d{0,8})?$/.test(normalized)) return 0;

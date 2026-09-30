@@ -4,7 +4,8 @@
 
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import Dialog from "@mui/material/Dialog";
-import AddCardRoundedIcon from "@mui/icons-material/AddCardRounded";
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import AttachMoneyRoundedIcon from "@mui/icons-material/AttachMoneyRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ArrowOutwardRoundedIcon from "@mui/icons-material/ArrowOutwardRounded";
 import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
@@ -17,7 +18,6 @@ import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
 import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
-import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import NotesRoundedIcon from "@mui/icons-material/NotesRounded";
@@ -30,6 +30,7 @@ import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import RestaurantRoundedIcon from "@mui/icons-material/RestaurantRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import SwapVertRoundedIcon from "@mui/icons-material/SwapVertRounded";
@@ -41,6 +42,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useId, useMemo, useRef, useState } from "react";
 import { destinationError, destinationKey, parseBRL, splitBRL } from "@/lib/transfer";
+import { estimatePortfolioDayChange } from "@/lib/market";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import CallSplitRoundedIcon from "@mui/icons-material/CallSplitRounded";
 import { ActivityExplorer } from "@/components/activity-explorer";
@@ -87,41 +89,41 @@ const sendCategories = [
 const accounts = [
   {
     id: "personal",
-    handle: "@cirmit",
-    label: "Pessoal",
+    handle: "Solana",
+    label: "Conta 1",
     address: "4VvX9NQGZB7rjBfM7K9yvV5SJ6xPkm3BR9U2mZ5wJ1eR",
     multiplier: 1,
-    avatar: "C",
+    avatar: "1",
   },
   {
     id: "reserve",
-    handle: "@reserve",
-    label: "Reserva",
+    handle: "Reserva",
+    label: "Conta 2",
     address: "8Hb2vRrGQm3PyXQYkT6mU7fW9aN4jL2sE5xC1pV7dK3Z",
     multiplier: 0.62,
-    avatar: "R",
+    avatar: "2",
   },
   {
     id: "travel",
-    handle: "@travel",
-    label: "Viagem",
+    handle: "Viagem",
+    label: "Conta 3",
     address: "6Pa4kQ3vJ8mT2yW7sN5dF9rB1xL6cE4uH3zG7V2qM8aK",
     multiplier: 0.28,
-    avatar: "V",
+    avatar: "3",
   },
 ] as const;
 
 const quickActions = [
-  { id: "send", label: "Enviar", icon: ArrowOutwardRoundedIcon },
-  { id: "receive", label: "Receber", icon: QrCodeScannerRoundedIcon },
-  { id: "buy", label: "Comprar", icon: AddCardRoundedIcon },
+  { id: "send", label: "Enviar", icon: SendOutlinedIcon },
+  { id: "receive", label: "Receber", icon: AddRoundedIcon },
+  { id: "buy", label: "Comprar", icon: AttachMoneyRoundedIcon },
 ] as const;
 
 const dashboardTabs = [
   { id: "tokens", label: "Tokens", icon: GridViewRoundedIcon },
-  { id: "memes", label: "Radar", icon: LocalFireDepartmentRoundedIcon },
+  { id: "memes", label: "Explorar", icon: LocalFireDepartmentRoundedIcon },
   { id: "nfts", label: "NFTs", icon: CollectionsRoundedIcon },
-  { id: "activity", label: "Atividade", icon: HistoryRoundedIcon },
+  { id: "activity", label: "Histórico", icon: HistoryRoundedIcon },
 ] as const;
 
 const demoNfts = [
@@ -158,6 +160,18 @@ const demoNfts = [
       "radial-gradient(circle at 50% 45%, rgba(231,233,235,.48), transparent 15%), radial-gradient(circle at 48% 48%, rgba(75,143,105,.52), transparent 33%), linear-gradient(150deg,#25282a,#101413 54%,#202224)",
   },
 ] as const;
+
+const searchItems: { label: string; detail: string; keywords: string; target: "receive" | "send" | "swap" | DashboardTab }[] = [
+  { label: "Receber por QR Code", detail: "Abrir endereço da carteira", keywords: "receber qr solana", target: "receive" },
+  { label: "Enviar", detail: "Preparar uma transferência", keywords: "enviar transferencia", target: "send" },
+  { label: "Trocar", detail: "Trocar SOL e USDC", keywords: "swap trocar sol usdc", target: "swap" },
+  { label: "Tokens", detail: "Ver SOL e USDC", keywords: "tokens ativos solana usdc", target: "tokens" },
+  { label: "Explorar Solana", detail: "Tokens em alta ao vivo", keywords: "memes memecoins axiom dexscreener radar explorar", target: "memes" },
+  { label: "NFTs", detail: "Abrir colecionáveis", keywords: "nft colecao colecionaveis", target: "nfts" },
+  { label: "Histórico", detail: "Ver pagamentos e recebimentos", keywords: "atividade historico transacoes pagamentos", target: "activity" },
+  { label: "Resumo", detail: "Ver distribuição e fluxo", keywords: "resumo insights carteira portfolio", target: "insights" },
+  ...demoNfts.map((nft) => ({ label: nft.name, detail: nft.collection, keywords: "nft " + nft.name + " " + nft.collection, target: "nfts" as const })),
+];
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -249,10 +263,6 @@ export function DashboardView({
     accounts.find((item) => item.id === selectedAccountId) ?? accounts[0];
 
   const accountBalance = balance * account.multiplier;
-  const netGain = (income - expenses) * account.multiplier;
-  const gainPercent = income > 0 ? (netGain / (income * account.multiplier)) * 100 : 0;
-  const positive = netGain > 0;
-  const negative = netGain < 0;
   const sendNumericAmount = parseBRL(sendAmount);
   const postSendBalance = Math.max(accountBalance - sendNumericAmount, 0);
   const sendImpactPercent = Math.min(
@@ -300,19 +310,23 @@ export function DashboardView({
   const positivePortfolio = Math.max(accountBalance, 0);
   const solValue = positivePortfolio * 0.52;
   const usdcValue = positivePortfolio * 0.48;
+  const hasPortfolioQuote = Boolean(!marketError && solana?.current_price && usdc?.current_price);
+  const performance = hasPortfolioQuote ? estimatePortfolioDayChange([
+    { value: solValue, changePercent: solana?.price_change_percentage_24h ?? 0 },
+    { value: usdcValue, changePercent: usdc?.price_change_percentage_24h ?? 0 },
+  ]) : null;
+  const portfolioGain = performance?.amount ?? 0;
+  const gainPercent = performance?.percent ?? 0;
+  const positive = performance !== null && portfolioGain > 0;
+  const negative = performance !== null && portfolioGain < 0;
   const solQuantity =
     solana?.current_price && solana.current_price > 0 ? solValue / solana.current_price : 0;
   const usdcQuantity =
     usdc?.current_price && usdc.current_price > 0 ? usdcValue / usdc.current_price : 0;
 
-  const glow = positive
-    ? "radial-gradient(ellipse 115% 70% at 50% -16%, rgba(16,91,58,0.52) 0%, rgba(21,68,46,0.25) 27%, rgba(9,11,12,0) 71%), linear-gradient(180deg, #112219 0%, #101714 22%, #0a0b0d 56%, #0a0b0d 100%)"
-    : negative
-      ? "radial-gradient(ellipse 115% 70% at 50% -16%, rgba(90,39,50,0.34) 0%, rgba(45,29,34,0.16) 30%, rgba(10,11,13,0) 72%), linear-gradient(180deg, #1c1517 0%, #111113 26%, #0a0b0d 58%, #0a0b0d 100%)"
-      : "radial-gradient(ellipse 110% 65% at 50% -16%, rgba(69,75,73,0.22) 0%, rgba(10,11,13,0) 70%), linear-gradient(180deg, #151819 0%, #0a0b0d 52%, #0a0b0d 100%)";
+  const positiveBalanceBackground = "radial-gradient(ellipse 95% 105% at 50% -22%, rgba(49,126,84,0.4), transparent 71%), linear-gradient(160deg, #173424 0%, #18281e 48%, #1d2420 100%)";
 
-  const assets = useMemo(
-    () => [
+  const assets = [
       {
         id: "solana",
         name: "Solana",
@@ -331,9 +345,7 @@ export function DashboardView({
         change: usdc?.price_change_percentage_24h ?? 0,
         image: usdc?.image ?? "",
       },
-    ],
-    [solQuantity, solValue, solana, usdcQuantity, usdcValue, usdc],
-  );
+    ];
 
   useEffect(() => {
     let alive = true;
@@ -528,23 +540,6 @@ export function DashboardView({
     });
   }
 
-  const searchItems = [
-    { label: "Receber por QR Code", detail: "Abrir endereço da carteira", keywords: "receber qr solana", action: () => setModal("receive") },
-    { label: "Enviar", detail: "Preparar uma transferência", keywords: "enviar transferencia", action: () => openAction("send") },
-    { label: "Swap", detail: "Trocar SOL e USDC", keywords: "swap trocar sol usdc", action: () => setModal("swap") },
-    { label: "Tokens", detail: "Ver SOL e USDC", keywords: "tokens ativos solana usdc", action: () => selectTab("tokens") },
-    { label: "Radar Solana", detail: "Tokens em movimento ao vivo", keywords: "memes memecoins axiom dexscreener radar", action: () => selectTab("memes") },
-    { label: "NFTs", detail: "Abrir colecionáveis", keywords: "nft colecao colecionaveis", action: () => selectTab("nfts") },
-    { label: "Atividade", detail: "Ver pagamentos e recebimentos", keywords: "atividade transacoes pagamentos", action: () => selectTab("activity") },
-    { label: "Insights", detail: "Ver distribuição e fluxo", keywords: "insights carteira portfolio", action: () => selectTab("insights") },
-    ...demoNfts.map((nft) => ({
-      label: nft.name,
-      detail: nft.collection,
-      keywords: "nft " + nft.name + " " + nft.collection,
-      action: () => selectTab("nfts"),
-    })),
-  ];
-
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase("pt-BR");
   const filteredSearchItems = normalizedSearch
     ? searchItems.filter((item) =>
@@ -568,11 +563,7 @@ export function DashboardView({
 
   return (
     <MotionConfig reducedMotion="user">
-    <div
-      className="relative min-h-screen overflow-hidden bg-[#0a0b0d] text-white"
-      style={{ backgroundImage: glow }}
-    >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[linear-gradient(180deg,rgba(10,11,13,0)_0%,rgba(10,11,13,0.04)_34%,rgba(10,11,13,0.58)_72%,#0a0b0d_100%)]" />
+    <div className="relative min-h-screen overflow-hidden bg-[#0b0c0e] text-white">
 
       <main className="relative mx-auto w-full max-w-[760px] px-4 pb-24 pt-5 sm:px-7 sm:pt-7 lg:px-8">
         <motion.header
@@ -587,11 +578,11 @@ export function DashboardView({
               onClick={() => setAccountMenuOpen((open) => !open)}
               className="flex items-center gap-3 rounded-2xl p-1 pr-2 text-left transition hover:bg-white/[0.04]"
             >
-              <span className="grid h-11 w-11 place-items-center rounded-full border border-white/[0.07] bg-[#292b2d] text-sm font-black text-[#e0e1e3]">
+              <span className="grid h-11 w-11 place-items-center rounded-full border border-[#aea1ee]/20 bg-[#393448] text-sm font-bold text-[#c5b8fa]">
                 {account.avatar}
               </span>
               <span>
-                <span className="block text-[11px] font-semibold text-white/50">{account.handle}</span>
+                <span className="block text-[10px] font-medium text-white/45">{account.handle}</span>
                 <span className="mt-0.5 flex items-center gap-1 text-sm font-semibold tracking-[-0.02em] text-[#f4f4f5]">
                   {account.label}
                   <KeyboardArrowDownRoundedIcon
@@ -696,10 +687,12 @@ export function DashboardView({
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.56, ease }}
-          className="pt-12 text-center sm:pt-16"
+          className="relative mt-8 overflow-hidden rounded-[28px] border border-white/[0.065] bg-[#1d2022] px-4 pb-11 pt-11 text-center shadow-[0_24px_65px_rgba(0,0,0,.22)] sm:mt-10 sm:px-7 sm:pb-12 sm:pt-12"
         >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/32">
-            saldo da carteira
+          <motion.div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ backgroundImage: positiveBalanceBackground }} initial={false} animate={{ opacity: positive ? 1 : 0 }} transition={{ duration: 0.65, ease }} />
+          <div className="relative z-10">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+            Saldo total
           </p>
           <div className="mt-3 flex items-center justify-center gap-2.5">
             <motion.h1
@@ -725,13 +718,15 @@ export function DashboardView({
             </button>
           </div>
 
-          <div className="mt-5 flex items-center justify-center gap-2 text-sm font-bold">
+          <div className="mt-5 flex items-center justify-center gap-2 text-sm font-semibold tabular-nums">
             <span className={gainClass}>
-              {balancesVisible ? (netGain > 0 ? "+" : "") + currency.format(netGain) : "••••"}
+              {!performance ? marketError ? "Cotação indisponível" : "Atualizando" : balancesVisible ? (portfolioGain > 0 ? "+" : "") + currency.format(portfolioGain) : "••••"}
             </span>
             <span className={"rounded-md px-2 py-1 text-xs " + gainPillClass}>
-              {formatPercent(gainPercent)}
+              {performance ? formatPercent(gainPercent) : "—"}
             </span>
+          </div>
+          <p className="mt-2 text-[10px] font-medium text-white/35">Variação estimada · 24h</p>
           </div>
         </motion.section>
 
@@ -739,7 +734,7 @@ export function DashboardView({
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.16, duration: 0.56, ease }}
-          className="mt-10 grid grid-cols-3 gap-2.5 sm:gap-3"
+          className="mt-5 grid grid-cols-3 gap-2.5 sm:gap-3"
         >
           {quickActions.map((action) => {
             const Icon = action.icon;
@@ -750,11 +745,11 @@ export function DashboardView({
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => openAction(action.id)}
-                className="group flex min-h-[96px] min-w-0 flex-col items-center justify-center gap-2 rounded-[19px] border border-white/[0.05] bg-[#2a2d30]/95 px-1.5 shadow-[0_8px_30px_rgba(0,0,0,.12)] transition hover:border-white/[0.1] hover:bg-[#33373a] sm:min-h-[106px] sm:rounded-[22px]"
+                className="group flex min-h-[96px] min-w-0 flex-col items-center justify-center gap-2 rounded-[20px] border border-white/[0.045] bg-[#25272b] px-1.5 transition-colors hover:border-white/[0.1] hover:bg-[#2e3035] sm:min-h-[106px]"
               >
                 <Icon
                   sx={{ fontSize: { xs: 24, sm: 27 } }}
-                  className="text-[#b7a9f1] transition-transform duration-300 group-hover:scale-110"
+                  className="text-[#b9aaf5] transition-transform duration-300 group-hover:scale-110"
                 />
                 <span className="text-[10px] font-semibold text-[#c9cacc] sm:text-[11px]">
                   {action.label}
@@ -765,18 +760,15 @@ export function DashboardView({
         </motion.section>
 
         <div className="mt-3 flex items-center justify-center gap-2">
-          <button type="button" onClick={() => setModal("swap")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/[0.055] bg-white/[0.04] px-3 text-[10px] font-semibold text-[#b6c5ba] transition hover:bg-white/[0.08]"><SwapVertRoundedIcon sx={{ fontSize: 17 }} />Trocar moedas</button>
-          <Link href="/dashboard/memes" className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/[0.055] bg-white/[0.04] px-3 text-[10px] font-semibold text-[#b6c5ba] transition hover:bg-white/[0.08]"><LocalFireDepartmentRoundedIcon sx={{ fontSize: 15 }} />Radar ao vivo</Link>
+          <button type="button" onClick={() => setModal("swap")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/[0.055] bg-[#1d1f22] px-3 text-[10px] font-semibold text-[#bfc0c6] transition hover:bg-[#292b30]"><SwapVertRoundedIcon sx={{ fontSize: 17 }} />Trocar</button>
+          <Link href="/dashboard/memes" className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/[0.055] bg-[#1d1f22] px-3 text-[10px] font-semibold text-[#bfc0c6] transition hover:bg-[#292b30]"><LocalFireDepartmentRoundedIcon sx={{ fontSize: 15 }} />Explorar</Link>
         </div>
 
-        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.48, ease }} className="mt-4 grid grid-cols-2 gap-2" aria-label="Resumo rápido">
-          <button type="button" onClick={() => selectTab("insights")} className="flex min-w-0 items-center gap-2.5 rounded-[16px] border border-white/[0.045] bg-white/[0.035] px-3 py-3 text-left transition hover:bg-white/[0.065] sm:px-4">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#71d9a0]/10 text-[#83dfab]"><InsightsRoundedIcon sx={{ fontSize: 18 }} /></span>
-            <span className="min-w-0"><span className="block truncate text-[11px] text-white/45">Seu fluxo</span><span className={"mt-0.5 block truncate text-xs font-semibold sm:text-sm " + gainClass}>{balancesVisible ? (netGain > 0 ? "+" : "") + currency.format(netGain) : "••••"}</span></span>
-          </button>
-          <button type="button" onClick={() => selectTab("activity")} className="flex min-w-0 items-center gap-2.5 rounded-[16px] border border-white/[0.045] bg-white/[0.035] px-3 py-3 text-left transition hover:bg-white/[0.065] sm:px-4">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[0.07] text-[#d3d8d7]"><HistoryRoundedIcon sx={{ fontSize: 18 }} /></span>
-            <span className="min-w-0"><span className="block truncate text-[11px] text-white/45">Última atividade</span><span className="mt-0.5 block truncate text-xs font-semibold text-[#e7e9e8] sm:text-sm">{transactions[0]?.descricao || "Sem registros"}</span></span>
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.48, ease }} className="mt-5" aria-label="Acesso ao histórico">
+          <button type="button" onClick={() => selectTab("activity")} className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#25272b] px-4 py-3 text-left transition-colors hover:bg-[#2e3035]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.065] text-[#c4c6ca]"><HistoryRoundedIcon sx={{ fontSize: 19 }} /></span>
+            <span className="min-w-0 flex-1"><span className="block text-[12px] font-semibold text-[#e6e7e9]">Transações</span><span className="mt-0.5 block text-[10px] text-[#9b9ea4]">{transactions.length} registros no histórico</span></span>
+            <ArrowOutwardRoundedIcon sx={{ fontSize: 18 }} className="text-[#a4a6ac]" />
           </button>
         </motion.section>
 
@@ -785,7 +777,7 @@ export function DashboardView({
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.23, duration: 0.58, ease }}
-          className="mt-6 grid grid-cols-4 gap-1 rounded-[18px] border border-white/[0.045] bg-black/15 p-1.5"
+          className="mt-6 grid grid-cols-4 gap-1 rounded-[18px] border border-white/[0.045] bg-[#17191c] p-1.5"
         >
           {dashboardTabs.map((tab) => {
             const Icon = tab.icon;
@@ -804,7 +796,7 @@ export function DashboardView({
                 {active && (
                   <motion.span
                     layoutId="dashboard-tab"
-                    className="absolute inset-0 rounded-[13px] bg-white/[0.075] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.035)]"
+                    className="absolute inset-0 rounded-[13px] bg-[#303237] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]"
                     transition={{ duration: 0.28, ease }}
                   />
                 )}
@@ -827,8 +819,8 @@ export function DashboardView({
             >
               <div className="flex items-center justify-between px-1 pb-1">
                 <div>
-                  <h2 className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/32">Ativos</h2>
-                  <p className="mt-1 text-[10px] text-white/24">Preço de mercado atualizado</p>
+                  <h2 className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">Ativos</h2>
+                  <p className="mt-1 text-[10px] text-white/35">Solana e USDC · carteira demonstrativa</p>
                 </div>
                 <Link href="/dashboard/crypto" className="text-[11px] font-semibold text-[#9b9da1] transition hover:text-[#e0e1e3]">
                   Mercado
@@ -841,7 +833,7 @@ export function DashboardView({
 
                 return (
                   <motion.div key={asset.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.055, duration: 0.36, ease }}>
-                    <Link href={"/dashboard/crypto?coin=" + asset.id} className="flex min-h-[68px] min-w-0 items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#222527]/94 px-3.5 py-2.5 transition hover:border-white/[0.09] hover:bg-[#2b2f30] active:scale-[0.99] sm:px-4">
+                    <Link href={"/dashboard/crypto?coin=" + asset.id} className="flex min-h-[68px] min-w-0 items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#25272b] px-3.5 py-2.5 transition hover:border-white/[0.09] hover:bg-[#2e3035] active:scale-[0.99] sm:px-4">
                       <CoinIcon id={asset.id} size={36} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[14px] font-semibold tracking-[-0.025em] text-[#f2f3f4]">{asset.name}</p>
@@ -857,11 +849,11 @@ export function DashboardView({
               })}
               <div className="pt-5"><MemeRadar compact /></div>
               <div className="my-4 grid grid-cols-2 gap-2">
-                <button type="button" onClick={()=>selectTab("activity")} className="group rounded-[18px] border border-white/[0.055] bg-white/[0.025] p-4 text-left transition hover:bg-white/[0.05]">
-                  <HistoryRoundedIcon sx={{fontSize:19}} className="text-[#9ad7bc]" />
-                  <p className="mt-3 text-xs font-semibold text-white/75">Seu extrato</p><p className="mt-1 text-[10px] text-white/40">{transactions.length} registros · filtros e CSV</p>
+                <button type="button" onClick={()=>selectTab("activity")} className="group rounded-[18px] border border-white/[0.045] bg-[#25272b] p-4 text-left transition hover:bg-[#2e3035]">
+                  <HistoryRoundedIcon sx={{fontSize:19}} className="text-[#b9aaf5]" />
+                  <p className="mt-3 text-xs font-semibold text-white/75">Histórico</p><p className="mt-1 text-[10px] text-white/40">{transactions.length} registros · filtros e CSV</p>
                 </button>
-                <Link href={transactions[0] ? `/dashboard/comprovante/${transactions[0].id}` : "/dashboard/nova-transacao"} className="rounded-[18px] border border-white/[0.055] bg-white/[0.025] p-4 transition hover:bg-white/[0.05]">
+                <Link href={transactions[0] ? `/dashboard/comprovante/${transactions[0].id}` : "/dashboard/nova-transacao"} className="rounded-[18px] border border-white/[0.045] bg-[#25272b] p-4 transition hover:bg-[#2e3035]">
                   <ReceiptLongRoundedIcon sx={{fontSize:19}} className="text-[#b8c7d4]" />
                   <p className="mt-3 text-xs font-semibold text-white/75">{transactions[0] ? "Último comprovante" : "Primeiro registro"}</p><p className="mt-1 truncate text-[10px] text-white/40">{transactions[0] ? transactions[0].descricao + " · PDF disponível" : "Adicione uma receita ou despesa"}</p>
                 </Link>
@@ -873,7 +865,7 @@ export function DashboardView({
           {dashboardTab === "memes" && (
             <motion.section key="memes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.28, ease }} className="mt-5">
               <MemeRadar compact />
-              <Link href="/dashboard/memes" className="mt-3 flex h-10 items-center justify-center gap-1 rounded-xl border border-white/[0.055] bg-white/[0.045] text-[11px] font-semibold text-[#c9dacf] transition hover:bg-white/[0.08]">Abrir radar completo <ArrowOutwardRoundedIcon sx={{ fontSize: 15 }} /></Link>
+              <Link href="/dashboard/memes" className="mt-3 flex h-10 items-center justify-center gap-1 rounded-xl border border-white/[0.055] bg-[#25272b] text-[11px] font-semibold text-[#c8c9ce] transition hover:bg-[#2e3035]">Ver todos os tokens <ArrowOutwardRoundedIcon sx={{ fontSize: 15 }} /></Link>
             </motion.section>
           )}
 
@@ -884,7 +876,7 @@ export function DashboardView({
                   <h2 className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/32">Colecionáveis</h2>
                   <p className="mt-1 text-[10px] text-white/24">4 NFTs demonstrativos nesta conta</p>
                 </div>
-                <span className="rounded-full bg-[#67df9c]/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#67df9c]">Demo</span>
+                <span className="rounded-full bg-[#b9aaf5]/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#b9aaf5]">Demo</span>
               </div>
               <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                 {demoNfts.map((nft, index) => (
@@ -897,7 +889,7 @@ export function DashboardView({
                     whileHover={{ y: -3 }}
                     whileTap={{ scale: 0.985 }}
                     onClick={() => setToast(nft.name + " · visualização demonstrativa")}
-                    className="group overflow-hidden rounded-[20px] border border-white/[0.045] bg-[#242629] text-left transition hover:border-white/[0.09]"
+                    className="group overflow-hidden rounded-[20px] border border-white/[0.045] bg-[#25272b] text-left transition hover:border-white/[0.09]"
                   >
                     <div className="relative aspect-square overflow-hidden" style={{ backgroundImage: nft.background }}>
                       <div className="absolute left-[18%] top-[18%] h-[42%] w-[42%] rounded-full border border-white/10 bg-white/[0.035] backdrop-blur-[2px] transition duration-500 group-hover:scale-110" />
@@ -932,13 +924,13 @@ export function DashboardView({
 
           {dashboardTab === "insights" && (
             <motion.section key="insights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.28, ease }} className="mt-5 space-y-3">
-              <div className="rounded-[22px] border border-white/[0.045] bg-[#242629]/94 p-4 sm:p-5">
+              <div className="rounded-[22px] border border-white/[0.045] bg-[#25272b] p-4 sm:p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="flex items-center gap-2 text-[#dfe1e3]"><BoltRoundedIcon sx={{ fontSize: 18 }} /><h2 className="text-[13px] font-semibold">Wallet Pulse</h2></div>
+                    <div className="flex items-center gap-2 text-[#dfe1e3]"><BoltRoundedIcon sx={{ fontSize: 18 }} /><h2 className="text-[13px] font-semibold">Visão da carteira</h2></div>
                     <p className="mt-1 text-[10px] leading-4 text-[#77797e]">Leitura rápida do seu portfólio e do fluxo financeiro.</p>
                   </div>
-                  <span className={"rounded-full px-2.5 py-1 text-[9px] font-bold " + (positive ? "bg-[#67df9c]/10 text-[#67df9c]" : negative ? "bg-[#ff6e7f]/10 text-[#ff7887]" : "bg-white/[0.05] text-white/40")}>{positive ? "Positivo" : negative ? "Negativo" : "Neutro"}</span>
+                  <span className={"rounded-full px-2.5 py-1 text-[9px] font-bold " + (positive ? "bg-[#67df9c]/10 text-[#67df9c]" : negative ? "bg-[#ff6e7f]/10 text-[#ff7887]" : "bg-white/[0.05] text-white/40")}>{positive ? "Mercado em alta" : negative ? "Mercado em baixa" : "Sem variação"}</span>
                 </div>
                 <div className="mt-5 grid grid-cols-3 gap-2">
                   <div className="rounded-[16px] bg-black/20 p-3"><p className="text-[8px] font-bold uppercase tracking-[0.12em] text-white/28">Entradas</p><p className="mt-2 truncate text-[12px] font-semibold text-[#dfe1e3]">{balancesVisible ? currency.format(income * account.multiplier) : "••••"}</p></div>
@@ -947,14 +939,14 @@ export function DashboardView({
                 </div>
               </div>
 
-              <div className="rounded-[22px] border border-white/[0.045] bg-[#242629]/94 p-4 sm:p-5">
+              <div className="rounded-[22px] border border-white/[0.045] bg-[#25272b] p-4 sm:p-5">
                 <div className="flex items-center justify-between gap-4"><div><p className="text-[11px] font-semibold text-[#e4e5e6]">Distribuição da carteira</p><p className="mt-1 text-[9px] text-[#6f7175]">Estimativa visual baseada no saldo atual</p></div><span className="text-[10px] font-semibold text-white/35">SOL / USDC</span></div>
-                <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-white/[0.04]"><div className="w-[52%] rounded-full bg-[#67df9c]/80" /><div className="w-[48%] bg-[#7f848b]/55" /></div>
+                <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-white/[0.04]"><div className="w-[52%] rounded-full bg-[#b9aaf5]" /><div className="w-[48%] bg-[#7f848b]/55" /></div>
                 <div className="mt-3 grid grid-cols-2 gap-3 text-[10px]"><div className="flex items-center justify-between"><span className="text-white/35">Solana</span><span className="font-semibold text-white/70">52%</span></div><div className="flex items-center justify-between"><span className="text-white/35">USDC</span><span className="font-semibold text-white/70">48%</span></div></div>
               </div>
 
-              <button type="button" onClick={() => setSearchOpen(true)} className="flex w-full items-center justify-between rounded-[20px] border border-white/[0.045] bg-[#242629]/94 px-4 py-3.5 text-left transition hover:bg-[#2a2c2f]">
-                <span><span className="block text-[11px] font-semibold text-[#e4e5e6]">Spotlight da carteira</span><span className="mt-1 block text-[9px] text-[#6f7175]">Busque ações, ativos e NFTs em um só lugar</span></span>
+              <button type="button" onClick={() => setSearchOpen(true)} className="flex w-full items-center justify-between rounded-[20px] border border-white/[0.045] bg-[#25272b] px-4 py-3.5 text-left transition hover:bg-[#2e3035]">
+                <span><span className="block text-[11px] font-semibold text-[#e4e5e6]">Busca rápida</span><span className="mt-1 block text-[9px] text-[#6f7175]">Ações, ativos e colecionáveis</span></span>
                 <span className="rounded-lg border border-white/[0.07] bg-black/20 px-2 py-1 text-[9px] font-semibold text-white/34">Ctrl K</span>
               </button>
             </motion.section>
@@ -985,7 +977,9 @@ export function DashboardView({
                     key={item.label + index}
                     type="button"
                     onClick={() => {
-                      item.action();
+                      if (item.target === "send") openAction("send");
+                      else if (item.target === "receive" || item.target === "swap") setModal(item.target);
+                      else selectTab(item.target);
                       setSearchOpen(false);
                       setSearchQuery("");
                     }}

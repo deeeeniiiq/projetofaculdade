@@ -92,7 +92,7 @@ export function CryptoMarket({ embedded = false, initialCoin = "solana", initial
   }
 
   const chart = (
-    <section className={"min-w-0 overflow-hidden rounded-[24px] border border-white/[0.055] bg-[#191c1e] " + (embedded ? "p-4 sm:p-5" : "p-5 sm:p-6")} aria-label="Gráfico de mercado">
+    <section className={"min-w-0 overflow-hidden rounded-[24px] border border-white/[0.055] " + (embedded ? "bg-[#25272b] p-4 sm:p-5" : "bg-[#191c1e] p-5 sm:p-6")} aria-label="Gráfico de mercado">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <CoinIcon key={selectedId} id={selectedId} size={embedded ? 34 : 42} />
@@ -118,7 +118,7 @@ export function CryptoMarket({ embedded = false, initialCoin = "solana", initial
           </p>
         </div>
         {!embedded && <div className="mb-1 hidden items-center gap-2 sm:flex">
-          <button onClick={() => openTrade("buy")} className="flex h-9 items-center gap-1 rounded-xl bg-[#c5f5d9] px-3 text-[11px] font-semibold text-[#172c21] transition hover:bg-[#defbe9] active:scale-95"><AddRoundedIcon sx={{ fontSize: 17 }} />Comprar</button>
+          <button onClick={() => openTrade("buy")} className="flex h-9 items-center gap-1 rounded-xl bg-[#c7bbf8] px-3 text-[11px] font-semibold text-[#241c39] transition hover:bg-[#ded6ff] active:scale-95"><AddRoundedIcon sx={{ fontSize: 17 }} />Comprar</button>
           <button onClick={() => openTrade("swap")} className="flex h-9 items-center gap-1 rounded-xl bg-white/[0.06] px-3 text-[11px] font-semibold text-[#c8d3d6] transition hover:bg-white/10 active:scale-95"><SwapHorizRoundedIcon sx={{ fontSize: 17 }} />Swap</button>
         </div>}
       </div>
@@ -144,7 +144,7 @@ export function CryptoMarket({ embedded = false, initialCoin = "solana", initial
       </div>
 
       {embedded ? <div className="mt-5 grid grid-cols-2 gap-2 border-t border-white/[0.055] pt-4">
-        <motion.button whileTap={{ scale: 0.98 }} onClick={() => openTrade("buy")} className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#c5f5d9] text-xs font-semibold text-[#172c21] transition hover:bg-[#defbe9]"><AddRoundedIcon sx={{ fontSize: 18 }} />Comprar {selectedMeta.symbol}</motion.button>
+        <motion.button whileTap={{ scale: 0.98 }} onClick={() => openTrade("buy")} className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#c7bbf8] text-xs font-semibold text-[#241c39] transition hover:bg-[#ded6ff]"><AddRoundedIcon sx={{ fontSize: 18 }} />Comprar {selectedMeta.symbol}</motion.button>
         <motion.button whileTap={{ scale: 0.98 }} onClick={() => openTrade("swap")} className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-white/[0.06] text-xs font-semibold text-[#d1dbdd] transition hover:bg-white/10"><SwapHorizRoundedIcon sx={{ fontSize: 19 }} />Trocar moedas</motion.button>
       </div> : <div className="mt-5 grid grid-cols-3 gap-2 border-t border-white/[0.055] pt-5">
         {[{ label: "Máxima · 24h", value: selectedCoin ? formatPrice(selectedCoin.high_24h) : "—" }, { label: "Mínima · 24h", value: selectedCoin ? formatPrice(selectedCoin.low_24h) : "—" }, { label: "Volume · 24h", value: selectedCoin ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 }).format(selectedCoin.volume_24h) : "—" }].map((stat) => <div key={stat.label}><p className="text-[10px] text-[#7d8b91]">{stat.label}</p><p className="mt-1.5 text-[11px] font-medium text-[#d3dde0] sm:text-xs">{stat.value}</p></div>)}
@@ -154,8 +154,8 @@ export function CryptoMarket({ embedded = false, initialCoin = "solana", initial
 
   return (
     <div className={embedded ? "pt-5" : "mx-auto max-w-[1320px] px-4 py-6 sm:px-7 sm:py-8 lg:px-8"}>
-      {embedded ? <div className="mb-3 flex items-center justify-between px-1"><h2 className="text-[11px] font-semibold text-[#a1adb0]">De olho no mercado</h2><Link href={"/dashboard/crypto?coin=" + selectedId} className="flex items-center gap-1 text-[10px] text-[#92a199] transition hover:text-[#c6e7d4]">Explorar<ArrowOutwardRoundedIcon sx={{ fontSize: 13 }} /></Link></div> : <motion.header initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-7 flex items-center justify-between">
-        <div><Link href="/dashboard" className="mb-3 inline-flex items-center gap-1.5 text-[11px] text-[#8d999e] transition hover:text-white"><ArrowBackRoundedIcon sx={{ fontSize: 14 }} />Sua carteira</Link><h1 className="text-[28px] font-semibold tracking-[-0.05em] text-[#eef3f1]">Mercado cripto<span className="text-[#71a788]">.</span></h1><p className="mt-1 text-xs text-[#7e8a90]">Cotações, gráficos e trocas simuladas.</p></div>
+      {embedded ? <div className="mb-3 flex items-center justify-between px-1"><h2 className="text-[11px] font-semibold text-[#a1adb0]">Mercado</h2><Link href={"/dashboard/crypto?coin=" + selectedId} className="flex items-center gap-1 text-[10px] text-[#ada4dd] transition hover:text-[#d7d0fa]">Ver gráfico<ArrowOutwardRoundedIcon sx={{ fontSize: 13 }} /></Link></div> : <motion.header initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-7 flex items-center justify-between">
+        <div><Link href="/dashboard" className="mb-3 inline-flex items-center gap-1.5 text-[11px] text-[#8d999e] transition hover:text-white"><ArrowBackRoundedIcon sx={{ fontSize: 14 }} />Sua carteira</Link><h1 className="text-[28px] font-semibold tracking-[-0.05em] text-[#eef3f1]">Mercado cripto<span className="text-[#b9aaf5]">.</span></h1><p className="mt-1 text-xs text-[#7e8a90]">Cotações, gráficos e trocas simuladas.</p></div>
         <div className="hidden text-right sm:block"><p className="text-[10px] text-[#77858a]">Cotações em reais</p><p className="mt-1.5 text-xs text-[#d0dbd6]">BRL <span className="text-[#64796d]">/</span> {data?.source ?? "mercado"}</p></div>
       </motion.header>}
 
@@ -184,7 +184,7 @@ export function CryptoMarket({ embedded = false, initialCoin = "solana", initial
         <div className="flex items-center justify-between gap-3"><div><h2 className="text-sm font-semibold text-[#ecedee]">Explorar ativos</h2><p className="mt-1 text-[11px] text-[#7e898d]">{markets.length || coins.length} moedas · cotações em reais</p></div><span className="text-[11px] text-[#79898f]">24h</span></div>
         <label className="mt-4 flex h-11 items-center gap-2.5 rounded-xl border border-white/[0.07] bg-[#0f1113] px-3 text-[#848d91] focus-within:border-[#8ce8b7]/40"><SearchRoundedIcon sx={{ fontSize: 19 }} /><span className="sr-only">Buscar criptomoeda</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar moeda ou símbolo" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#777f83]" /></label>
         <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filtrar mercado">
-          {([{ id: "all", label: "Todas" }, { id: "favorites", label: "Favoritas" }, { id: "gainers", label: "Em alta" }, { id: "losers", label: "Em queda" }] as const).map((filter) => <button key={filter.id} type="button" aria-pressed={marketFilter === filter.id} onClick={() => setMarketFilter(filter.id)} className={"min-h-9 shrink-0 rounded-full px-3 text-xs font-medium transition " + (marketFilter === filter.id ? "bg-[#d2f7e0] text-[#152a1e]" : "bg-white/[0.05] text-[#9da8a5] hover:bg-white/[0.09]")}>{filter.label}</button>)}
+          {([{ id: "all", label: "Todas" }, { id: "favorites", label: "Favoritas" }, { id: "gainers", label: "Em alta" }, { id: "losers", label: "Em queda" }] as const).map((filter) => <button key={filter.id} type="button" aria-pressed={marketFilter === filter.id} onClick={() => setMarketFilter(filter.id)} className={"min-h-9 shrink-0 rounded-full px-3 text-xs font-medium transition " + (marketFilter === filter.id ? "bg-[#c7bbf8] text-[#241c39]" : "bg-white/[0.05] text-[#9da8a5] hover:bg-white/[0.09]")}>{filter.label}</button>)}
         </div>
         <div className="mt-3" aria-live="polite">
         {listedCoins.map((coin) => {
