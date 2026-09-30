@@ -32,9 +32,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <MotionConfig reducedMotion="user" transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}>
     <WalletLock>
-      <div className="min-h-screen bg-[#111214] text-white">
+      <div className="min-h-screen bg-[#0a0b0d] text-white">
         <div className={`mx-auto grid min-h-screen ${walletHome ? "max-w-none grid-cols-1" : "max-w-[1540px] grid-cols-1 lg:grid-cols-[238px_1fr]"}`}>
-          <aside className={`${walletHome ? "hidden" : "sticky top-0 hidden h-screen border-r border-white/[0.055] bg-[#121315]/94 px-4 py-6 backdrop-blur-xl lg:flex lg:flex-col"}`}>
+          <aside className={`${walletHome ? "hidden" : "sticky top-0 hidden h-screen border-r border-white/[0.055] bg-[#0d0e10]/94 px-4 py-6 backdrop-blur-xl lg:flex lg:flex-col"}`}>
             <Link href="/dashboard" className="flex items-center gap-3 px-2.5">
               <motion.span whileHover={{ rotate: -5, scale: 1.04 }} className="grid h-10 w-10 place-items-center rounded-[14px] bg-[#2a2d2f] text-[#70e3a3] shadow-[0_8px_28px_rgba(0,0,0,0.2)] ring-1 ring-inset ring-white/[0.06]">
                 <span className="text-lg font-black tracking-[-0.08em]">S</span>

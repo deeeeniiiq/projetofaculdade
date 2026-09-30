@@ -5,6 +5,14 @@ export const coins = [
   { id: "usd-coin", symbol: "USDC", name: "USDC" },
   { id: "binancecoin", symbol: "BNB", name: "BNB" },
   { id: "chainlink", symbol: "LINK", name: "Chainlink" },
+  { id: "ripple", symbol: "XRP", name: "XRP" },
+  { id: "cardano", symbol: "ADA", name: "Cardano" },
+  { id: "dogecoin", symbol: "DOGE", name: "Dogecoin" },
+  { id: "avalanche-2", symbol: "AVAX", name: "Avalanche" },
+  { id: "polkadot", symbol: "DOT", name: "Polkadot" },
+  { id: "tron", symbol: "TRX", name: "TRON" },
+  { id: "litecoin", symbol: "LTC", name: "Litecoin" },
+  { id: "uniswap", symbol: "UNI", name: "Uniswap" },
 ] as const;
 
 export const ranges = [

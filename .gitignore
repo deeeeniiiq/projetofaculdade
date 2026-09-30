@@ -54,3 +54,5 @@ dashboard-preview*.png
 market-preview*.png
 AGENTS.md
 CLAUDE.md
+.vercel
+.env*

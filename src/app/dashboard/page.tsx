@@ -3,7 +3,7 @@ import { getTransactions, isDemoMode } from "@/lib/transactions";
 
 export const dynamic = "force-dynamic";
 
-const INITIAL_BALANCE = 20487.63;
+import { INITIAL_BALANCE } from "@/lib/transfer";
 
 export default async function DashboardPage() {
   const transactions = await getTransactions();

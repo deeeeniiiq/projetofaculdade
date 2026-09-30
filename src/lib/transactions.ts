@@ -6,6 +6,8 @@ import type { NewTransaction, Transaction } from "@/types/transaction";
 
 const dataDirectory = path.join(process.cwd(), ".data");
 const dataFile = path.join(dataDirectory, "transactions.json");
+const transactionColumns =
+  "id, descricao, valor, tipo, criado_em, destinatario, identificador, metodo, mensagem, categoria, status, taxa";
 
 function getSupabaseCredentials() {
   const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -29,6 +31,14 @@ function getSupabase() {
       autoRefreshToken: false,
     },
   });
+}
+
+function ensureDemoStorageIsWritable() {
+  if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Supabase não configurado no ambiente de produção. Adicione SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY nas variáveis de ambiente do Vercel.",
+    );
+  }
 }
 
 function demoTransactions(): Transaction[] {
@@ -67,6 +77,8 @@ function demoTransactions(): Transaction[] {
 }
 
 async function readDemoData() {
+  ensureDemoStorageIsWritable();
+
   try {
     const raw = await readFile(dataFile, "utf8");
     return JSON.parse(raw) as Transaction[];
@@ -85,6 +97,28 @@ function normalizeTransaction(row: Record<string, unknown>): Transaction {
     valor: Number(row.valor),
     tipo: row.tipo === "receita" ? "receita" : "despesa",
     criado_em: String(row.criado_em),
+    destinatario:
+      row.destinatario === null || row.destinatario === undefined
+        ? null
+        : String(row.destinatario),
+    identificador:
+      row.identificador === null || row.identificador === undefined
+        ? null
+        : String(row.identificador),
+    metodo:
+      row.metodo === null || row.metodo === undefined ? null : String(row.metodo),
+    mensagem:
+      row.mensagem === null || row.mensagem === undefined
+        ? null
+        : String(row.mensagem),
+    categoria:
+      row.categoria === null || row.categoria === undefined
+        ? null
+        : String(row.categoria),
+    status:
+      row.status === null || row.status === undefined ? null : String(row.status),
+    taxa:
+      row.taxa === null || row.taxa === undefined ? null : Number(row.taxa),
   };
 }
 
@@ -104,7 +138,7 @@ export async function getTransactions(): Promise<Transaction[]> {
 
   const { data, error } = await supabase
     .from("transacoes")
-    .select("id, descricao, valor, tipo, criado_em")
+    .select(transactionColumns)
     .order("criado_em", { ascending: false });
 
   if (error) {
@@ -115,6 +149,7 @@ export async function getTransactions(): Promise<Transaction[]> {
 }
 
 export async function getTransactionById(id: string): Promise<Transaction | null> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
   const supabase = getSupabase();
 
   if (!supabase) {
@@ -124,7 +159,7 @@ export async function getTransactionById(id: string): Promise<Transaction | null
 
   const { data, error } = await supabase
     .from("transacoes")
-    .select("id, descricao, valor, tipo, criado_em")
+    .select(transactionColumns)
     .eq("id", id)
     .maybeSingle();
 
@@ -135,13 +170,14 @@ export async function getTransactionById(id: string): Promise<Transaction | null
   return data ? normalizeTransaction(data) : null;
 }
 
-export async function addTransaction(input: NewTransaction) {
+export async function addTransaction(input: NewTransaction, requestId?: string) {
   const supabase = getSupabase();
 
   if (!supabase) {
+    ensureDemoStorageIsWritable();
     const current = await readDemoData();
     const created: Transaction = {
-      id: randomUUID(),
+      id: requestId ?? randomUUID(),
       ...input,
       criado_em: new Date().toISOString(),
     };
@@ -149,13 +185,18 @@ export async function addTransaction(input: NewTransaction) {
     return created;
   }
 
+  const payload: NewTransaction & { id?: string } = { ...input, ...(requestId ? { id: requestId } : {}) };
   const { data, error } = await supabase
     .from("transacoes")
-    .insert(input)
-    .select("id, descricao, valor, tipo, criado_em")
+    .insert(payload)
+    .select(transactionColumns)
     .single();
 
   if (error) {
+    if (requestId && error.code === "23505") {
+      const existing = await getTransactionById(requestId);
+      if (existing && existing.valor === input.valor && existing.identificador === input.identificador && existing.metodo === input.metodo && existing.destinatario === input.destinatario) return existing;
+    }
     throw new Error(`Falha ao salvar transação: ${error.message}`);
   }
 

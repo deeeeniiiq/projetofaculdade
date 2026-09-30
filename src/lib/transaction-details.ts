@@ -70,6 +70,20 @@ function initials(value: string) {
 }
 
 export function getTransactionDetails(transaction: Transaction): TransactionDetails {
+  if (transaction.destinatario || transaction.identificador || transaction.metodo) {
+    return {
+      counterparty: transaction.destinatario || transaction.descricao,
+      identityLabel: transaction.metodo === "PIX" ? "Chave PIX" : "Destino",
+      identity: transaction.identificador || "Dados não informados",
+      method: transaction.metodo || "Transferência",
+      category: transaction.categoria || "Transferência",
+      location: transaction.mensagem || "Transferência registrada pela carteira",
+      status: transaction.status || "Concluída",
+      initials: initials(transaction.destinatario || transaction.descricao),
+      tone: transaction.tipo === "receita" ? "income" : "expense",
+    };
+  }
+
   const preset = knownDetails[keyFromDescription(transaction.descricao)];
   if (preset) return { ...preset, tone: transaction.tipo === "receita" ? "income" : "expense" };
 

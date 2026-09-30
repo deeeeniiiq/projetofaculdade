@@ -2,30 +2,49 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import Dialog from "@mui/material/Dialog";
 import AddCardRoundedIcon from "@mui/icons-material/AddCardRounded";
+import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ArrowOutwardRoundedIcon from "@mui/icons-material/ArrowOutwardRounded";
 import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import CollectionsRoundedIcon from "@mui/icons-material/CollectionsRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import CardGiftcardRoundedIcon from "@mui/icons-material/CardGiftcardRounded";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
+import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
+import NotesRoundedIcon from "@mui/icons-material/NotesRounded";
+import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
+import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
+import PictureAsPdfRoundedIcon from "@mui/icons-material/PictureAsPdfRounded";
 import QrCodeScannerRoundedIcon from "@mui/icons-material/QrCodeScannerRounded";
+import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
+import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
+import RestaurantRoundedIcon from "@mui/icons-material/RestaurantRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
+import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
 import SwapVertRoundedIcon from "@mui/icons-material/SwapVertRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import QRCode from "qrcode";
 import Link from "next/link";
-import { useEffect, useId, useMemo, useState } from "react";
-import { TransactionList } from "@/components/transaction-list";
+import { useRouter } from "next/navigation";
+import { startTransition, useEffect, useId, useMemo, useRef, useState } from "react";
+import { destinationError, destinationKey, parseBRL, splitBRL } from "@/lib/transfer";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import CallSplitRoundedIcon from "@mui/icons-material/CallSplitRounded";
+import { ActivityExplorer } from "@/components/activity-explorer";
+import { sendTransfer } from "@/app/actions/transactions";
+
 import { CoinIcon } from "@/components/coin-icon";
 import { CryptoMarket } from "@/components/crypto-market";
 import { TradePanel } from "@/components/trade-panel";
@@ -51,6 +70,17 @@ type DashboardViewProps = {
 
 type ModalKind = "receive" | "send" | "swap" | "buy" | null;
 type DashboardTab = "tokens" | "nfts" | "activity" | "insights";
+type SendStep = "compose" | "review" | "processing" | "success";
+type SendMethod = "PIX" | "Carteira";
+type SendCategory = "Transferência" | "Alimentação" | "Moradia" | "Presente";
+
+const sendCategories = [
+  { id: "Transferência", label: "Transferência", icon: PaymentsRoundedIcon },
+  { id: "Alimentação", label: "Alimentação", icon: RestaurantRoundedIcon },
+  { id: "Moradia", label: "Moradia", icon: HomeRoundedIcon },
+  { id: "Presente", label: "Presente", icon: CardGiftcardRoundedIcon },
+] as const;
+
 
 const accounts = [
   {
@@ -135,18 +165,29 @@ function formatPercent(value: number) {
   return sign + value.toFixed(2) + "%";
 }
 
+function initialsFor(value: string) {
+  return value
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "•";
+}
+
 function ModalShell({
   open,
   title,
   subtitle,
   onClose,
   children,
+  busy = false,
 }: {
   open: boolean;
   title: string;
   subtitle: string;
   onClose: () => void;
   children: React.ReactNode;
+  busy?: boolean;
 }) {
   const id = useId();
   return (
@@ -154,7 +195,7 @@ function ModalShell({
       <div className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div><h2 id={id} className="text-lg font-semibold tracking-[-0.035em] text-white">{title}</h2><p className="mt-1 text-xs leading-5 text-[#858f93]">{subtitle}</p></div>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.055] text-[#aaaab0] transition hover:bg-white/[0.09] hover:text-white"><CloseRoundedIcon sx={{ fontSize: 18 }} /></button>
+          <button type="button" disabled={busy} onClick={onClose} aria-label={busy ? "Aguarde o registro" : "Fechar"} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.055] text-[#aaaab0] transition hover:bg-white/[0.09] hover:text-white"><CloseRoundedIcon sx={{ fontSize: 18 }} /></button>
         </div>
         <div className="mt-5">{children}</div>
       </div>
@@ -169,6 +210,7 @@ export function DashboardView({
   balance,
   demoMode,
 }: DashboardViewProps) {
+  const router = useRouter();
   const [selectedAccountId, setSelectedAccountId] =
     useState<(typeof accounts)[number]["id"]>("personal");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -177,8 +219,26 @@ export function DashboardView({
   const { markets, updatedAt, error: marketError } = useMarket("solana", "1d");
   const marketLoading = markets.length === 0;
   const [toast, setToast] = useState("");
+  const [sendRecipient, setSendRecipient] = useState("");
   const [sendAddress, setSendAddress] = useState("");
   const [sendAmount, setSendAmount] = useState("");
+  const [sendMethod, setSendMethod] = useState<SendMethod>("PIX");
+  const [sendMessage, setSendMessage] = useState("");
+  const [sendCategory, setSendCategory] = useState<SendCategory>("Transferência");
+  const [sendStep, setSendStep] = useState<SendStep>("compose");
+  const [sendProgress, setSendProgress] = useState(0);
+  const [sendError, setSendError] = useState("");
+  const [createdTransfer, setCreatedTransfer] = useState<Transaction | null>(null);
+  const [duplicateTransfer, setDuplicateTransfer] = useState<Transaction | null>(null);
+  const [duplicateAcknowledged, setDuplicateAcknowledged] = useState(false);
+  const sending = useRef(false);
+  const requestId = useRef("");
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [splitTotal, setSplitTotal] = useState("");
+  const [splitPeople, setSplitPeople] = useState(2);
+  const split = splitBRL(parseBRL(splitTotal), splitPeople);
+  const [sendStartedAt, setSendStartedAt] = useState(0);
   const [dashboardTab, setDashboardTab] = useState<DashboardTab>("tokens");
   const [balancesVisible, setBalancesVisible] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -192,6 +252,47 @@ export function DashboardView({
   const gainPercent = income > 0 ? (netGain / (income * account.multiplier)) * 100 : 0;
   const positive = netGain > 0;
   const negative = netGain < 0;
+  const sendNumericAmount = parseBRL(sendAmount);
+  const postSendBalance = Math.max(accountBalance - sendNumericAmount, 0);
+  const sendImpactPercent = Math.min(
+    Math.max((sendNumericAmount / Math.max(accountBalance, 1)) * 100, 0),
+    100,
+  );
+  const suggestedAmounts = [50, 100, 250, 500].filter((value) => value <= accountBalance);
+  const sendHistory = useMemo(() => transactions.filter((transaction) =>
+    transaction.tipo === "despesa" && transaction.identificador &&
+    destinationKey(transaction.metodo || "", transaction.identificador) === destinationKey(sendMethod, sendAddress)
+  ), [sendAddress, sendMethod, transactions]);
+  const recentRecipients = useMemo(() => {
+    const grouped = new Map<string, { name: string; destination: string; method: SendMethod; initials: string; historyCount: number }>();
+    for (const transaction of transactions) {
+      if (transaction.tipo !== "despesa" || !transaction.destinatario || !transaction.identificador) continue;
+      const method = transaction.metodo === "Carteira" ? "Carteira" : "PIX";
+      const key = destinationKey(method, transaction.identificador);
+      const existing = grouped.get(key);
+      if (existing) existing.historyCount++;
+      else grouped.set(key, { name: transaction.destinatario, destination: transaction.identificador, method, initials: initialsFor(transaction.destinatario), historyCount: 1 });
+    }
+    return [...grouped.values()].sort((a,b) => Number(favorites.includes(destinationKey(b.method,b.destination))) - Number(favorites.includes(destinationKey(a.method,a.destination)))).slice(0,6);
+  }, [transactions, favorites]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      try {
+        const value: unknown = JSON.parse(localStorage.getItem("saldo-favorite-destinations") || "[]");
+        if (Array.isArray(value)) setFavorites(value.filter((item): item is string => typeof item === "string"));
+      } catch { /* A blocked browser store does not prevent sending. */ }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  function toggleFavorite() {
+    const key = destinationKey(sendMethod, sendAddress);
+    const next = favorites.includes(key) ? favorites.filter((item) => item !== key) : [...favorites, key];
+    setFavorites(next);
+    try { localStorage.setItem("saldo-favorite-destinations", JSON.stringify(next)); }
+    catch { setToast("Favorito mantido apenas nesta sessão."); }
+  }
 
   const solana = markets.find((coin) => coin.id === "solana");
   const usdc = markets.find((coin) => coin.id === "usd-coin");
@@ -204,10 +305,10 @@ export function DashboardView({
     usdc?.current_price && usdc.current_price > 0 ? usdcValue / usdc.current_price : 0;
 
   const glow = positive
-    ? "radial-gradient(ellipse 115% 70% at 50% -16%, rgba(23,104,64,0.52) 0%, rgba(24,76,52,0.31) 24%, rgba(24,45,36,0.15) 45%, rgba(17,18,20,0) 73%), linear-gradient(180deg, #14241c 0%, #151a18 18%, #111315 42%, #111214 100%)"
+    ? "radial-gradient(ellipse 115% 70% at 50% -16%, rgba(16,91,58,0.52) 0%, rgba(21,68,46,0.25) 27%, rgba(9,11,12,0) 71%), linear-gradient(180deg, #112219 0%, #101714 22%, #0a0b0d 56%, #0a0b0d 100%)"
     : negative
-      ? "radial-gradient(ellipse 115% 70% at 50% -16%, rgba(112,43,53,0.38) 0%, rgba(69,35,40,0.20) 30%, rgba(17,18,20,0) 72%), linear-gradient(180deg, #211719 0%, #171617 20%, #111214 48%, #111214 100%)"
-      : "radial-gradient(ellipse 110% 65% at 50% -16%, rgba(82,86,85,0.22) 0%, rgba(17,18,20,0) 70%), linear-gradient(180deg, #181a1b 0%, #131516 35%, #111214 100%)";
+      ? "radial-gradient(ellipse 115% 70% at 50% -16%, rgba(90,39,50,0.34) 0%, rgba(45,29,34,0.16) 30%, rgba(10,11,13,0) 72%), linear-gradient(180deg, #1c1517 0%, #111113 26%, #0a0b0d 58%, #0a0b0d 100%)"
+      : "radial-gradient(ellipse 110% 65% at 50% -16%, rgba(69,75,73,0.22) 0%, rgba(10,11,13,0) 70%), linear-gradient(180deg, #151819 0%, #0a0b0d 52%, #0a0b0d 100%)";
 
   const assets = useMemo(
     () => [
@@ -276,6 +377,13 @@ export function DashboardView({
   }, []);
 
   function openAction(action: (typeof quickActions)[number]["id"]) {
+    if (action === "send") {
+      if (sendStep === "success") resetSend();
+      requestId.current = crypto.randomUUID();
+      setSendStep("compose");
+      setSendError("");
+      setCreatedTransfer(null);
+    }
     setModal(action);
   }
 
@@ -288,12 +396,127 @@ export function DashboardView({
     }
   }
 
-  function confirmSend() {
-    if (!sendAddress.trim() || !Number.isFinite(Number(sendAmount)) || Number(sendAmount) <= 0) return;
-    setModal(null);
+  function resetSend() {
+    requestId.current = crypto.randomUUID();
+    setSplitOpen(false);
+    setSplitTotal("");
+    setSendRecipient("");
     setSendAddress("");
     setSendAmount("");
-    setToast("Simulação concluída. Nenhuma transação foi enviada à blockchain.");
+    setSendMethod("PIX");
+    setSendMessage("");
+    setSendCategory("Transferência");
+    setSendError("");
+    setCreatedTransfer(null);
+    setDuplicateTransfer(null);
+    setDuplicateAcknowledged(false);
+    setSendProgress(0);
+    setSendStep("compose");
+  }
+
+  function reviewSend() {
+    const amount = parseBRL(sendAmount);
+    if (sendRecipient.trim().length < 2) {
+      setSendError("Informe quem vai receber.");
+      return;
+    }
+    const invalidDestination = destinationError(sendMethod, sendAddress);
+    if (invalidDestination) {
+      setSendError(invalidDestination);
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setSendError("Informe um valor maior que zero.");
+      return;
+    }
+    if (amount > accountBalance) {
+      setSendError("Saldo insuficiente para essa transferência.");
+      return;
+    }
+    const cutoff = Date.now() - 10 * 60 * 1000;
+    const possibleDuplicate =
+      sendHistory.find(
+        (transaction) =>
+          Math.abs(transaction.valor - amount) < 0.005 &&
+          new Date(transaction.criado_em).getTime() >= cutoff,
+      ) ?? null;
+    setDuplicateTransfer(possibleDuplicate);
+    setDuplicateAcknowledged(false);
+    setSendError("");
+    setSendStep("review");
+  }
+
+  async function confirmSend() {
+    const amount = parseBRL(sendAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    if (duplicateTransfer && !duplicateAcknowledged) {
+      setSendError("Confirme que você reconhece a possível transferência duplicada antes de continuar.");
+      return;
+    }
+
+    if (sending.current) return;
+    sending.current = true;
+    if (!requestId.current) requestId.current = crypto.randomUUID();
+    setSendStep("processing");
+    setSendError("");
+    setSendStartedAt(Date.now());
+    setSendProgress(1);
+    try {
+      const result = await new Promise<Awaited<ReturnType<typeof sendTransfer>>>((resolve, reject) => {
+        startTransition(async () => {
+          try { resolve(await sendTransfer({
+            requestId: requestId.current, recipient: sendRecipient, destination: sendAddress,
+            amount, method: sendMethod, message: sendMessage, category: sendCategory,
+          })); } catch (error) { reject(error); }
+        });
+      });
+      if (!result.ok) { setSendError(result.error); setSendStep("review"); return; }
+      setSendProgress(3);
+      setCreatedTransfer(result.transaction);
+      setSendStep("success");
+      router.refresh();
+    } catch {
+      setSendError("Não foi possível confirmar a resposta. Tente novamente: o mesmo identificador evita registrar este envio duas vezes.");
+      setSendStep("review");
+    } finally { sending.current = false; }
+  }
+
+  async function copyTransferCode() {
+    if (!createdTransfer) return;
+    const code = `SLD-${createdTransfer.id.replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+    try {
+      await navigator.clipboard.writeText(code);
+      setToast("Código do comprovante copiado.");
+    } catch {
+      setToast("Não foi possível copiar o código.");
+    }
+  }
+
+  async function shareTransfer() {
+    if (!createdTransfer) return;
+    const url = `${window.location.origin}/dashboard/comprovante/${createdTransfer.id}`;
+    const code = `SLD-${createdTransfer.id.replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Comprovante de transferência",
+          text: `${code} · ${currency.format(createdTransfer.valor)} para ${createdTransfer.destinatario || sendRecipient}`,
+          url,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setToast("Link do comprovante copiado.");
+    } catch {
+      setToast("Compartilhamento cancelado.");
+    }
+  }
+
+  function finishSend() {
+    setModal(null);
+    setDashboardTab("activity");
+    setToast("Transferência salva no histórico.");
+
   }
 
 
@@ -306,7 +529,7 @@ export function DashboardView({
 
   const searchItems = [
     { label: "Receber por QR Code", detail: "Abrir endereço da carteira", keywords: "receber qr solana", action: () => setModal("receive") },
-    { label: "Enviar", detail: "Preparar uma transferência", keywords: "enviar transferencia", action: () => setModal("send") },
+    { label: "Enviar", detail: "Preparar uma transferência", keywords: "enviar transferencia", action: () => openAction("send") },
     { label: "Swap", detail: "Trocar SOL e USDC", keywords: "swap trocar sol usdc", action: () => setModal("swap") },
     { label: "Tokens", detail: "Ver SOL e USDC", keywords: "tokens ativos solana usdc", action: () => selectTab("tokens") },
     { label: "NFTs", detail: "Abrir colecionáveis", keywords: "nft colecao colecionaveis", action: () => selectTab("nfts") },
@@ -342,11 +565,12 @@ export function DashboardView({
       : "bg-white/[0.055] text-white/45";
 
   return (
+    <MotionConfig reducedMotion="user">
     <div
-      className="relative min-h-screen overflow-hidden bg-[#111214] text-white"
+      className="relative min-h-screen overflow-hidden bg-[#0a0b0d] text-white"
       style={{ backgroundImage: glow }}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[linear-gradient(180deg,rgba(17,18,20,0)_0%,rgba(17,18,20,0.04)_34%,rgba(17,18,20,0.58)_72%,#111214_100%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[linear-gradient(180deg,rgba(10,11,13,0)_0%,rgba(10,11,13,0.04)_34%,rgba(10,11,13,0.58)_72%,#0a0b0d_100%)]" />
 
       <main className="relative mx-auto w-full max-w-[760px] px-4 pb-24 pt-5 sm:px-7 sm:pt-7 lg:px-8">
         <motion.header
@@ -470,7 +694,7 @@ export function DashboardView({
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.56, ease }}
-          className="pt-16 text-center sm:pt-20"
+          className="pt-12 text-center sm:pt-16"
         >
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/32">
             saldo da carteira
@@ -481,7 +705,7 @@ export function DashboardView({
               initial={{ opacity: 0, y: 8, filter: "blur(5px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               transition={{ duration: 0.38, ease }}
-              className="text-[clamp(3.15rem,10vw,5.4rem)] font-semibold leading-none tracking-[-0.075em] text-[#fafafa]"
+              className={(currency.format(accountBalance).length > 15 ? "text-[clamp(1.9rem,7vw,4.1rem)]" : currency.format(accountBalance).length > 12 ? "text-[clamp(2.3rem,8vw,4.8rem)]" : "text-[clamp(3.15rem,10vw,5.4rem)]") + " min-w-0 font-semibold leading-none tracking-[-0.075em] text-[#fafafa]"}
             >
               {balancesVisible ? currency.format(accountBalance) : "••••••"}
             </motion.h1>
@@ -513,7 +737,7 @@ export function DashboardView({
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.16, duration: 0.56, ease }}
-          className="mt-12 grid grid-cols-4 gap-2 sm:gap-3"
+          className="mt-10 grid grid-cols-4 gap-2 sm:gap-3"
         >
           {quickActions.map((action) => {
             const Icon = action.icon;
@@ -524,7 +748,7 @@ export function DashboardView({
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => openAction(action.id)}
-                className="group flex min-h-[84px] min-w-0 flex-col items-center justify-center gap-2 rounded-[18px] border border-white/[0.035] bg-[#292b2e]/94 px-1.5 transition hover:bg-[#303235] sm:min-h-[92px] sm:rounded-[20px]"
+                className="group flex min-h-[84px] min-w-0 flex-col items-center justify-center gap-2 rounded-[18px] border border-white/[0.05] bg-[#222527]/92 px-1.5 shadow-[0_8px_30px_rgba(0,0,0,.1)] transition hover:border-white/[0.1] hover:bg-[#2c3031] sm:min-h-[92px] sm:rounded-[20px]"
               >
                 <Icon
                   sx={{ fontSize: { xs: 24, sm: 27 } }}
@@ -538,12 +762,23 @@ export function DashboardView({
           })}
         </motion.section>
 
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.48, ease }} className="mt-4 grid grid-cols-2 gap-2" aria-label="Resumo rápido">
+          <button type="button" onClick={() => selectTab("insights")} className="flex min-w-0 items-center gap-2.5 rounded-[16px] border border-white/[0.045] bg-white/[0.035] px-3 py-3 text-left transition hover:bg-white/[0.065] sm:px-4">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#71d9a0]/10 text-[#83dfab]"><InsightsRoundedIcon sx={{ fontSize: 18 }} /></span>
+            <span className="min-w-0"><span className="block truncate text-[11px] text-white/45">Seu fluxo</span><span className={"mt-0.5 block truncate text-xs font-semibold sm:text-sm " + gainClass}>{balancesVisible ? (netGain > 0 ? "+" : "") + currency.format(netGain) : "••••"}</span></span>
+          </button>
+          <button type="button" onClick={() => selectTab("activity")} className="flex min-w-0 items-center gap-2.5 rounded-[16px] border border-white/[0.045] bg-white/[0.035] px-3 py-3 text-left transition hover:bg-white/[0.065] sm:px-4">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[0.07] text-[#d3d8d7]"><HistoryRoundedIcon sx={{ fontSize: 18 }} /></span>
+            <span className="min-w-0"><span className="block truncate text-[11px] text-white/45">Última atividade</span><span className="mt-0.5 block truncate text-xs font-semibold text-[#e7e9e8] sm:text-sm">{transactions[0]?.descricao || "Sem registros"}</span></span>
+          </button>
+        </motion.section>
+
         <motion.nav
           id="wallet-content"
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.23, duration: 0.58, ease }}
-          className="mt-7 grid grid-cols-4 gap-1 rounded-[18px] border border-white/[0.045] bg-black/15 p-1.5"
+          className="mt-6 grid grid-cols-4 gap-1 rounded-[18px] border border-white/[0.045] bg-black/15 p-1.5"
         >
           {dashboardTabs.map((tab) => {
             const Icon = tab.icon;
@@ -599,7 +834,7 @@ export function DashboardView({
 
                 return (
                   <motion.div key={asset.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.055, duration: 0.36, ease }}>
-                    <Link href={"/dashboard/crypto?coin=" + asset.id} className="flex min-h-[68px] min-w-0 items-center gap-3 rounded-[18px] border border-white/[0.035] bg-[#282a2d]/94 px-3.5 py-2.5 transition hover:bg-[#2e3033] active:scale-[0.99] sm:px-4">
+                    <Link href={"/dashboard/crypto?coin=" + asset.id} className="flex min-h-[68px] min-w-0 items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#222527]/94 px-3.5 py-2.5 transition hover:border-white/[0.09] hover:bg-[#2b2f30] active:scale-[0.99] sm:px-4">
                       <CoinIcon id={asset.id} size={36} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[14px] font-semibold tracking-[-0.025em] text-[#f2f3f4]">{asset.name}</p>
@@ -613,6 +848,16 @@ export function DashboardView({
                   </motion.div>
                 );
               })}
+              <div className="my-4 grid grid-cols-2 gap-2">
+                <button type="button" onClick={()=>selectTab("activity")} className="group rounded-[18px] border border-white/[0.055] bg-white/[0.025] p-4 text-left transition hover:bg-white/[0.05]">
+                  <HistoryRoundedIcon sx={{fontSize:19}} className="text-[#9ad7bc]" />
+                  <p className="mt-3 text-xs font-semibold text-white/75">Seu extrato</p><p className="mt-1 text-[10px] text-white/40">{transactions.length} registros · filtros e CSV</p>
+                </button>
+                <Link href={transactions[0] ? `/dashboard/comprovante/${transactions[0].id}` : "/dashboard/nova-transacao"} className="rounded-[18px] border border-white/[0.055] bg-white/[0.025] p-4 transition hover:bg-white/[0.05]">
+                  <ReceiptLongRoundedIcon sx={{fontSize:19}} className="text-[#b8c7d4]" />
+                  <p className="mt-3 text-xs font-semibold text-white/75">{transactions[0] ? "Último comprovante" : "Primeiro registro"}</p><p className="mt-1 truncate text-[10px] text-white/40">{transactions[0] ? transactions[0].descricao + " · PDF disponível" : "Adicione uma receita ou despesa"}</p>
+                </Link>
+              </div>
               <CryptoMarket embedded />
             </motion.section>
           )}
@@ -666,7 +911,7 @@ export function DashboardView({
                 </div>
                 <Link href="/dashboard/nova-transacao" className="rounded-full bg-white/[0.045] px-3 py-1.5 text-[10px] font-semibold text-[#a9abae] transition hover:bg-white/[0.075] hover:text-white">Adicionar</Link>
               </div>
-              <TransactionList transactions={transactions} />
+              <ActivityExplorer transactions={transactions} />
             </motion.section>
           )}
 
@@ -794,43 +1039,314 @@ export function DashboardView({
 
       <ModalShell
         open={modal === "send"}
-        title="Enviar"
-        subtitle="Prepare uma transferência. Nesta versão, a confirmação é apenas uma simulação visual."
-        onClose={() => setModal(null)}
+        busy={sendStep === "processing"}
+        title={sendStep === "success" ? "Envio registrado" : sendStep === "processing" ? "Registrando" : sendStep === "review" ? "Revise o envio" : "Enviar dinheiro"}
+        subtitle={sendStep === "success" ? "Histórico atualizado. Seu comprovante está disponível." : sendStep === "processing" ? "Aguarde a confirmação do registro." : "Simulação acadêmica. Registra a saída no app, sem enviar PIX ou cripto reais."}
+        onClose={() => {
+          if (sendStep === "processing") return;
+          if (sendStep === "success") finishSend();
+          else setModal(null);
+        }}
       >
-        <label className="block">
-          <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/35">Destino</span>
-          <input
-            value={sendAddress}
-            onChange={(event) => setSendAddress(event.target.value)}
-            placeholder="Endereço da carteira"
-            className="mt-2 h-12 w-full rounded-[16px] border border-white/[0.07] bg-white/[0.04] px-4 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.055]"
-          />
-        </label>
+        <AnimatePresence mode="wait" initial={false}>
+          {sendStep === "compose" && (
+            <motion.div key="compose" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.22, ease }}>
+              <div className="mb-5 flex items-center gap-1.5">
+                {[0, 1, 2].map((step) => <span key={step} className={`h-1 flex-1 rounded-full ${step === 0 ? "bg-[#67df9c]" : "bg-white/[0.07]"}`} />)}
+              </div>
 
-        <label className="mt-4 block">
-          <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/35">Valor</span>
-          <div className="mt-2 flex h-14 items-center rounded-[16px] border border-white/[0.07] bg-white/[0.04] px-4 focus-within:border-white/20">
-            <span className="text-sm font-semibold text-white/35">R$</span>
-            <input
-              value={sendAmount}
-              onChange={(event) => setSendAmount(event.target.value.replace(",", "."))}
-              inputMode="decimal"
-              placeholder="0,00"
-              className="h-full min-w-0 flex-1 bg-transparent px-2 text-xl font-semibold tracking-[-0.03em] text-white outline-none placeholder:text-white/18"
-            />
-          </div>
-        </label>
+              {recentRecipients.length > 0 && <div className="mb-5">
+                <div className="flex items-center justify-between"><span className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/35">Recentes</span><span className="text-[9px] text-white/22">toque para preencher</span></div>
+                <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
+                  {recentRecipients.map((recipient) => (
+                    <button key={destinationKey(recipient.method,recipient.destination)} type="button" onClick={() => { setSendRecipient(recipient.name); setSendAddress(recipient.destination); setSendMethod(recipient.method); setSendError(""); }} className="group min-w-[112px] rounded-[16px] border border-white/[0.055] bg-white/[0.035] p-2.5 text-left transition hover:bg-white/[0.065]">
+                      <span className="grid h-8 w-8 place-items-center rounded-full bg-[#2d3032] text-[10px] font-bold text-[#e4e5e7] ring-1 ring-inset ring-white/[0.05]">{favorites.includes(destinationKey(recipient.method,recipient.destination)) ? <StarRoundedIcon sx={{ fontSize: 16 }} /> : recipient.initials}</span>
+                      <span className="mt-2 block truncate text-[10px] font-semibold text-[#d9dade]">{recipient.name}</span>
+                      <span className="mt-0.5 block text-[8px] font-semibold uppercase tracking-[0.08em] text-white/25">{recipient.method}{"historyCount" in recipient ? ` · ${recipient.historyCount}x` : ""}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>}
 
-        <button
-          type="button"
-          onClick={confirmSend}
-          disabled={!sendAddress.trim() || !Number.isFinite(Number(sendAmount)) || Number(sendAmount) <= 0}
-          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-[16px] bg-[#eceeef] text-sm font-bold text-[#17191b] transition enabled:hover:bg-white disabled:cursor-not-allowed disabled:opacity-35"
-        >
-          <SendRoundedIcon sx={{ fontSize: 18 }} />
-          Simular envio
-        </button>
+              <div className="grid grid-cols-2 gap-2 rounded-[15px] bg-black/20 p-1">
+                {(["PIX", "Carteira"] as SendMethod[]).map((method) => (
+                  <button key={method} type="button" onClick={() => { setSendMethod(method); setSendAddress(""); setSendError(""); }} className={`rounded-[12px] px-3 py-2.5 text-[10px] font-bold transition ${sendMethod === method ? "bg-white/[0.09] text-white shadow-[0_4px_16px_rgba(0,0,0,.2)]" : "text-white/35 hover:text-white/65"}`}>{method}</button>
+                ))}
+              </div>
+
+              <div className="mt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/35">Como classificar</span>
+                  <span className="text-[9px] text-white/22">aparece no histórico</span>
+                </div>
+                <div className="mt-2 grid grid-cols-4 gap-1.5">
+                  {sendCategories.map((category) => {
+                    const Icon = category.icon;
+                    const active = sendCategory === category.id;
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => setSendCategory(category.id)}
+                        className={`flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-[14px] border px-1.5 text-center transition ${active ? "border-[#67df9c]/20 bg-[#67df9c]/[0.08] text-[#8be8b2]" : "border-white/[0.05] bg-white/[0.025] text-white/35 hover:bg-white/[0.05] hover:text-white/60"}`}
+                      >
+                        <Icon sx={{ fontSize: 17 }} />
+                        <span className="max-w-full truncate text-[8px] font-semibold">{category.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <label className="mt-4 block">
+                <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/35">Quem recebe</span>
+                <div className="mt-2 flex h-12 items-center gap-2 rounded-[16px] border border-white/[0.07] bg-white/[0.04] px-3.5 focus-within:border-white/20 focus-within:bg-white/[0.055]">
+                  <PersonRoundedIcon sx={{ fontSize: 18 }} className="text-white/24" />
+                  <input maxLength={80} value={sendRecipient} onChange={(event) => { setSendRecipient(event.target.value); setSendError(""); }} placeholder="Nome da pessoa ou empresa" className="h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/20" />
+                </div>
+              </label>
+
+              <label className="mt-3 block">
+                <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/35">{sendMethod === "PIX" ? "Chave PIX" : "Endereço da carteira"}</span>
+                <input maxLength={180} value={sendAddress} onChange={(event) => { setSendAddress(event.target.value); setSendError(""); }} placeholder={sendMethod === "PIX" ? "CPF, e-mail, telefone ou chave aleatória" : "Cole o endereço da carteira"} className="mt-2 h-12 w-full rounded-[16px] border border-white/[0.07] bg-white/[0.04] px-4 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.055]" />
+              </label>
+
+              <label className="mt-3 block">
+                <div className="flex items-center justify-between"><span className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/35">Valor</span><span className="text-[9px] text-white/24">Saldo {currency.format(accountBalance)}</span></div>
+                <div className="mt-2 flex h-16 items-center rounded-[18px] border border-white/[0.07] bg-white/[0.04] px-4 focus-within:border-[#67df9c]/30 focus-within:bg-white/[0.055]">
+                  <span className="text-sm font-semibold text-white/30">R$</span>
+                  <input value={sendAmount} onChange={(event) => { setSendAmount(event.target.value); setSendError(""); }} inputMode="decimal" placeholder="0,00" className="h-full min-w-0 flex-1 bg-transparent px-2 text-2xl font-semibold tracking-[-0.04em] text-white outline-none placeholder:text-white/16" />
+                  <button type="button" onClick={() => setSendAmount(Math.max(accountBalance, 0).toFixed(2))} className="rounded-full bg-[#67df9c]/10 px-2.5 py-1 text-[9px] font-bold text-[#67df9c] transition hover:bg-[#67df9c]/16">MÁX</button>
+                </div>
+                {suggestedAmounts.length > 0 && (
+                  <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
+                    {suggestedAmounts.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => { setSendAmount(value.toFixed(2)); setSendError(""); }}
+                        className="shrink-0 rounded-full border border-white/[0.055] bg-white/[0.025] px-2.5 py-1.5 text-[9px] font-semibold text-white/38 transition hover:border-white/[0.1] hover:bg-white/[0.05] hover:text-white/70"
+                      >
+                        {currency.format(value)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </label>
+
+              <AnimatePresence initial={false}>
+                {sendNumericAmount > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, y: -4 }}
+                    animate={{ opacity: 1, height: "auto", y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -4 }}
+                    className="mt-3 overflow-hidden rounded-[15px] border border-white/[0.05] bg-black/20 px-3.5 py-3"
+                  >
+                    <div className="flex items-end justify-between gap-3">
+                      <div>
+                        <p className="text-[8px] font-bold uppercase tracking-[0.11em] text-white/22">Impacto no saldo</p>
+                        <p className="mt-1 text-[10px] text-white/42">Você fica com <span className="font-semibold text-white/70">{currency.format(postSendBalance)}</span></p>
+                      </div>
+                      <span className="text-[9px] font-semibold text-white/28">{sendImpactPercent.toFixed(0)}%</span>
+                    </div>
+                    <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
+                      <motion.div
+                        animate={{ width: `${sendImpactPercent}%` }}
+                        transition={{ duration: 0.32, ease }}
+                        className="h-full rounded-full bg-[linear-gradient(90deg,#4abf7b,#7be5aa)]"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <label className="mt-3 block">
+                <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/35">Mensagem <span className="font-medium normal-case tracking-normal text-white/20">opcional</span></span>
+                <div className="mt-2 flex min-h-12 items-center gap-2 rounded-[16px] border border-white/[0.07] bg-white/[0.04] px-3.5 focus-within:border-white/20">
+                  <NotesRoundedIcon sx={{ fontSize: 17 }} className="text-white/22" />
+                  <input value={sendMessage} onChange={(event) => setSendMessage(event.target.value)} maxLength={240} placeholder="Ex: jantar, aluguel, presente..." className="h-11 min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/20" />
+                </div>
+              </label>
+
+              <div className="mt-3 rounded-2xl border border-white/[0.07] bg-black/15">
+                <button type="button" aria-expanded={splitOpen} onClick={() => setSplitOpen(!splitOpen)} className="flex w-full items-center justify-between p-3 text-xs text-white/65"><span className="flex items-center gap-2"><CallSplitRoundedIcon sx={{fontSize:18}} />Dividir uma conta</span><KeyboardArrowDownRoundedIcon sx={{fontSize:18, transform: splitOpen ? "rotate(180deg)" : "none"}} /></button>
+                <AnimatePresence initial={false}>{splitOpen && <motion.div initial={{height:0,opacity:0}} animate={{height:"auto",opacity:1}} exit={{height:0,opacity:0}} className="overflow-hidden">
+                  <div className="space-y-3 px-3 pb-3">
+                    <div className="grid grid-cols-2 gap-2"><label className="text-[11px] text-white/50">Total da conta<input aria-label="Total da conta" inputMode="decimal" value={splitTotal} onChange={e=>setSplitTotal(e.target.value)} placeholder="300,00" className="mt-1 h-10 w-full rounded-xl bg-white/5 px-3 text-white outline-none focus:ring-1 focus:ring-[#67df9c]" /></label>
+                    <label className="text-[11px] text-white/50">Pessoas<select aria-label="Pessoas" value={splitPeople} onChange={e=>setSplitPeople(Number(e.target.value))} className="mt-1 h-10 w-full rounded-xl bg-[#25292b] px-3 text-white">{[2,3,4,5,6,7,8,9,10].map(n=><option key={n} value={n}>{n} pessoas</option>)}</select></label></div>
+                    <p className="text-[11px] text-white/45">Sua parte: <strong className="text-[#8be8b2]">{currency.format(split?.share || 0)}</strong>{!!split?.remainder && <span> · Restam {currency.format(split.remainder)} para quem fechou a conta.</span>}</p>
+                    <button type="button" disabled={!split || split.share <= 0} onClick={()=>{if(split){setSendAmount(split.share.toFixed(2));setSendMessage("Minha parte da conta • 1 de " + splitPeople);setSplitOpen(false);}}} className="w-full rounded-xl bg-white/10 py-2 text-xs font-semibold disabled:opacity-30">Usar minha parte no envio</button>
+                  </div>
+                </motion.div>}</AnimatePresence>
+              </div>
+
+              {sendError && <motion.p initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }} role="alert" className="mt-3 rounded-[12px] bg-[#ff6879]/8 px-3 py-2 text-[10px] font-medium text-[#ff7c8b]">{sendError}</motion.p>}
+
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="rounded-[13px] bg-black/20 p-2.5"><p className="text-[8px] uppercase tracking-[0.1em] text-white/22">Taxa</p><p className="mt-1 text-[10px] font-semibold text-white/65">R$ 0,00</p></div>
+                <div className="rounded-[13px] bg-black/20 p-2.5"><p className="text-[8px] uppercase tracking-[0.1em] text-white/22">Prazo</p><p className="mt-1 text-[10px] font-semibold text-white/65">No app</p></div>
+                <div className="rounded-[13px] bg-black/20 p-2.5"><p className="text-[8px] uppercase tracking-[0.1em] text-white/22">Comprovante</p><p className="mt-1 text-[10px] font-semibold text-[#67df9c]">Automático</p></div>
+              </div>
+
+              <motion.button whileTap={{ scale: 0.985 }} type="button" onClick={reviewSend} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-[16px] bg-[#eceeef] text-sm font-bold text-[#17191b] transition hover:bg-white">
+                Revisar envio <ArrowOutwardRoundedIcon sx={{ fontSize: 17 }} />
+              </motion.button>
+            </motion.div>
+          )}
+
+          {sendStep === "review" && (
+            <motion.div key="review" initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.22, ease }}>
+              <div className="mb-5 flex items-center gap-1.5">{[0, 1, 2].map((step) => <span key={step} className={`h-1 flex-1 rounded-full ${step <= 1 ? "bg-[#67df9c]" : "bg-white/[0.07]"}`} />)}</div>
+              <button type="button" onClick={() => setSendStep("compose")} className="mb-4 inline-flex items-center gap-1 text-[10px] font-semibold text-white/35 transition hover:text-white/70"><ArrowBackRoundedIcon sx={{ fontSize: 16 }} />Editar dados</button>
+
+              <div className="rounded-[22px] border border-white/[0.06] bg-black/20 px-4 pb-5 pt-6 text-center">
+                <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#2b2e30] text-[12px] font-bold text-[#e7e8e9] ring-1 ring-inset ring-white/[0.06]">{sendRecipient.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "•"}</span>
+                <p className="mt-3 text-[11px] text-white/35">Você está enviando</p>
+                <p className="mt-1 text-[34px] font-semibold tracking-[-0.055em] text-white">{currency.format(sendNumericAmount)}</p>
+                <p className="mt-2 text-[12px] font-semibold text-[#d9dade]">para {sendRecipient}</p>
+                <p className="mt-1 break-all text-[9px] text-white/28">{sendAddress}</p>
+                <span className="mt-3 inline-flex rounded-full bg-white/[0.045] px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.09em] text-white/38">{sendCategory}</span>
+              </div>
+
+              <button type="button" aria-pressed={favorites.includes(destinationKey(sendMethod,sendAddress))} onClick={toggleFavorite} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/5 py-2.5 text-xs text-[#c9d4cd]"><StarRoundedIcon sx={{fontSize:17}} />{favorites.includes(destinationKey(sendMethod,sendAddress)) ? "Destino favorito neste aparelho" : "Favoritar destino neste aparelho"}</button>
+              <div className="mt-3 overflow-hidden rounded-[18px] border border-white/[0.055] bg-white/[0.025]">
+                {[['Método', sendMethod], ['Categoria', sendCategory], ['Mensagem', sendMessage || 'Sem mensagem'], ['Taxa', 'R$ 0,00'], ['Saldo após envio', currency.format(postSendBalance)]].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between gap-4 border-b border-white/[0.045] px-4 py-3 last:border-b-0"><span className="text-[10px] text-white/28">{label}</span><span className="max-w-[65%] truncate text-right text-[10px] font-semibold text-white/65">{value}</span></div>
+                ))}
+              </div>
+
+              <div className="mt-3 rounded-[16px] border border-white/[0.05] bg-black/15 p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[9px] font-semibold text-white/28">Saldo antes</span>
+                  <span className="text-[10px] font-semibold text-white/58">{currency.format(accountBalance)}</span>
+                </div>
+                <div className="my-2.5 h-px bg-white/[0.045]" />
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[9px] font-semibold text-white/28">Saldo depois</span>
+                  <motion.span key={postSendBalance} initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} className="text-[11px] font-bold text-[#89e8b3]">{currency.format(postSendBalance)}</motion.span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-start gap-3 rounded-[16px] bg-[#67df9c]/[0.07] p-3 ring-1 ring-inset ring-[#67df9c]/10">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#67df9c]/10 text-[#67df9c]"><ShieldRoundedIcon sx={{ fontSize: 17 }} /></span>
+                <div>
+                  <p className="text-[10px] font-semibold text-[#bcefd2]">{sendHistory.length > 0 ? "Destino reconhecido no histórico" : "Novo destino"}</p>
+                  <p className="mt-1 text-[9px] leading-4 text-[#73a68a]">
+                    {sendHistory.length > 0
+                      ? `Você já registrou ${sendHistory.length} ${sendHistory.length === 1 ? "pagamento" : "pagamentos"} para este destino. O formato foi conferido; a titularidade não é validada por banco.`
+                      : "Este destino ainda não aparece no seu histórico. Confira a chave ou carteira antes de confirmar."}
+                  </p>
+                </div>
+              </div>
+
+              <AnimatePresence initial={false}>
+                {duplicateTransfer && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: "auto" }}
+                    exit={{ opacity: 0, y: -5, height: 0 }}
+                    className="mt-3 overflow-hidden rounded-[16px] border border-[#f2ba64]/15 bg-[#f2ba64]/[0.07] p-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#f2ba64]/10 text-[#f2ba64]"><WarningAmberRoundedIcon sx={{ fontSize: 17 }} /></span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-semibold text-[#f4cb8d]">Possível envio duplicado</p>
+                        <p className="mt-1 text-[9px] leading-4 text-[#ae8a57]">Já existe um envio de {currency.format(duplicateTransfer.valor)} para este destino nos últimos 10 minutos.</p>
+                        <button
+                          type="button"
+                          onClick={() => { setDuplicateAcknowledged((value) => !value); setSendError(""); }}
+                          className={`mt-2 inline-flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[8px] font-bold uppercase tracking-[0.08em] transition ${duplicateAcknowledged ? "bg-[#67df9c]/12 text-[#8be8b2]" : "bg-white/[0.055] text-white/45 hover:bg-white/[0.08]"}`}
+                        >
+                          <span className={`h-2 w-2 rounded-full ${duplicateAcknowledged ? "bg-[#67df9c]" : "bg-white/20"}`} />
+                          {duplicateAcknowledged ? "Reconhecido" : "Estou ciente, enviar mesmo assim"}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {sendError && <p className="mt-3 rounded-[12px] bg-[#ff6879]/8 px-3 py-2 text-[10px] font-medium text-[#ff7c8b]">{sendError}</p>}
+
+              <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.985 }} type="button" onClick={confirmSend} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-[16px] bg-[#67df9c] text-sm font-bold text-[#0c2115] shadow-[0_12px_34px_rgba(103,223,156,.14)] transition hover:bg-[#76e7aa]"><SendRoundedIcon sx={{ fontSize: 18 }} />{duplicateTransfer && !duplicateAcknowledged ? "Revisar duplicidade" : "Confirmar simulação"}</motion.button>
+            </motion.div>
+          )}
+
+          {sendStep === "processing" && (
+            <motion.div key="processing" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} className="py-8 text-center">
+              <div className="relative mx-auto h-24 w-24">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.25, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border border-transparent border-t-[#67df9c] border-r-[#67df9c]/25" />
+                <motion.div animate={{ scale: [0.88, 1, 0.88], opacity: [0.28, 0.62, 0.28] }} transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }} className="absolute inset-3 rounded-full bg-[#67df9c]/10 shadow-[0_0_42px_rgba(103,223,156,.12)]" />
+                <motion.span animate={{ y: [1, -2, 1], x: [-1, 2, -1] }} transition={{ duration: 1.25, repeat: Infinity, ease: "easeInOut" }} className="absolute inset-0 grid place-items-center text-[#67df9c]"><SendRoundedIcon sx={{ fontSize: 29 }} /></motion.span>
+              </div>
+              <p className="mt-5 text-lg font-semibold tracking-[-0.03em] text-white">Registrando {currency.format(sendNumericAmount)}</p>
+              <p className="mt-1 text-xs text-white/32">para {sendRecipient}</p>
+              <div className="mx-auto mt-6 max-w-[292px] text-left">
+                {["Formato revisado", "Salvando no histórico", "Liberando comprovante"].map((label, index) => {
+                  const stage = index + 1;
+                  const done = sendProgress >= stage;
+                  const current = sendProgress === index;
+                  return (
+                    <motion.div key={label} initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.08 }} className="relative flex min-h-[48px] items-center gap-3">
+                      {index < 2 && <span className="absolute left-[10px] top-[32px] h-[28px] w-px bg-white/[0.06]" />}
+                      <span className={`relative z-10 grid h-[21px] w-[21px] shrink-0 place-items-center rounded-full border transition ${done ? "border-[#67df9c]/30 bg-[#67df9c]/12 text-[#67df9c]" : current ? "border-white/15 bg-white/[0.04] text-white/55" : "border-white/[0.06] bg-[#191c1e] text-white/15"}`}>
+                        {done ? <CheckCircleRoundedIcon sx={{ fontSize: 14 }} /> : current ? <motion.span animate={{ opacity: [0.35, 1, 0.35] }} transition={{ duration: 0.8, repeat: Infinity }} className="h-1.5 w-1.5 rounded-full bg-current" /> : <span className="h-1 w-1 rounded-full bg-current" />}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-[10px] font-semibold transition ${done ? "text-white/62" : current ? "text-white/48" : "text-white/20"}`}>{label}</p>
+                        <p className="mt-0.5 text-[8px] text-white/18">{done ? "Concluído" : current ? "Processando agora" : "Na sequência"}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+              <p className="mx-auto mt-5 max-w-[255px] text-[9px] leading-4 text-white/20">Você pode fechar a carteira depois da confirmação. O registro é persistido antes do comprovante aparecer.</p>
+            </motion.div>
+          )}
+
+          {sendStep === "success" && createdTransfer && (
+            <motion.div key="success" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.34, ease }} className="text-center">
+              <div className="relative mx-auto h-20 w-20">
+                {[[-34, -22], [34, -20], [-41, 9], [42, 12], [-24, 34], [27, 35]].map(([x, y], index) => (
+                  <motion.span
+                    key={`${x}-${y}`}
+                    initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
+                    animate={{ x, y, scale: [0, 1, 0.6], opacity: [0, 0.75, 0] }}
+                    transition={{ duration: 0.72, delay: 0.08 + index * 0.035, ease }}
+                    className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-[#82e9ae] shadow-[0_0_10px_rgba(130,233,174,.6)]"
+                  />
+                ))}
+                <motion.span initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1.35, opacity: [0, 0.24, 0] }} transition={{ duration: 0.8 }} className="absolute inset-0 rounded-full bg-[#67df9c]" />
+                <motion.span initial={{ scale: 0.55, rotate: -18 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 280, damping: 18 }} className="absolute inset-2 grid place-items-center rounded-full bg-[#67df9c] text-[#102218]"><CheckCircleRoundedIcon sx={{ fontSize: 34 }} /></motion.span>
+              </div>
+              <p className="mt-5 text-[11px] font-semibold text-[#78dca4]">Simulação registrada</p>
+              <p className="mt-1 text-[38px] font-semibold tracking-[-0.06em] text-white">{currency.format(createdTransfer.valor)}</p>
+              <p className="mt-2 text-xs text-white/38">para <span className="font-semibold text-white/70">{createdTransfer.destinatario || sendRecipient}</span></p>
+
+              <p className="mt-2 text-[10px] text-white/35">Registro iniciado às {new Date(sendStartedAt).toLocaleTimeString("pt-BR")} · sem movimentação bancária</p>
+              <div className="receipt-reveal mt-5 rounded-[18px] border border-white/[0.055] bg-black/20 p-3 text-left">
+                <div className="flex items-center justify-between gap-3"><div><p className="text-[8px] font-bold uppercase tracking-[0.12em] text-white/22">Comprovante</p><p className="mt-1 font-mono text-[9px] text-white/45">SLD-{createdTransfer.id.replaceAll("-", "").slice(0, 12).toUpperCase()}</p></div><button type="button" onClick={copyTransferCode} className="rounded-full bg-[#67df9c]/10 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.1em] text-[#67df9c] transition hover:bg-[#67df9c]/16">copiar ID</button></div>
+                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                  {[['Histórico', 'salvo'], ['PDF', 'pronto'], ['Taxa', 'R$ 0']].map(([label, value]) => (
+                    <div key={label} className="rounded-[10px] bg-white/[0.025] px-2 py-2">
+                      <p className="text-[7px] font-bold uppercase tracking-[0.09em] text-white/18">{label}</p>
+                      <p className="mt-1 text-[9px] font-semibold text-white/52">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Link href={`/dashboard/comprovante/${createdTransfer.id}`} className="flex min-h-11 items-center justify-center gap-2 rounded-[14px] border border-white/[0.07] bg-white/[0.04] px-3 text-[10px] font-semibold text-[#dfe1e3] transition hover:bg-white/[0.07]"><ReceiptLongRoundedIcon sx={{ fontSize: 17 }} />Ver comprovante</Link>
+                <a href={`/api/receipt/${createdTransfer.id}/pdf`} className="flex min-h-11 items-center justify-center gap-2 rounded-[14px] border border-white/[0.07] bg-white/[0.04] px-3 text-[10px] font-semibold text-[#dfe1e3] transition hover:bg-white/[0.07]"><PictureAsPdfRoundedIcon sx={{ fontSize: 17 }} />Baixar PDF</a>
+                <button type="button" onClick={copyTransferCode} className="flex min-h-11 items-center justify-center gap-2 rounded-[14px] border border-white/[0.07] bg-white/[0.04] px-3 text-[10px] font-semibold text-[#dfe1e3] transition hover:bg-white/[0.07]"><ContentCopyRoundedIcon sx={{ fontSize: 17 }} />Copiar ID</button>
+                <button type="button" onClick={shareTransfer} className="flex min-h-11 items-center justify-center gap-2 rounded-[14px] border border-white/[0.07] bg-white/[0.04] px-3 text-[10px] font-semibold text-[#dfe1e3] transition hover:bg-white/[0.07]"><ShareRoundedIcon sx={{ fontSize: 17 }} />Compartilhar</button>
+                <button type="button" onClick={() => { const recipient = sendRecipient; const address = sendAddress; const method = sendMethod; resetSend(); setSendRecipient(recipient); setSendAddress(address); setSendMethod(method); }} className="flex min-h-11 items-center justify-center gap-2 rounded-[14px] border border-white/[0.07] bg-white/[0.04] px-3 text-[10px] font-semibold text-[#dfe1e3] transition hover:bg-white/[0.07]"><ReplayRoundedIcon sx={{ fontSize: 17 }} />Repetir</button>
+                <button type="button" onClick={finishSend} className="flex min-h-11 items-center justify-center gap-2 rounded-[14px] bg-[#eceeef] px-3 text-[10px] font-bold text-[#17191b] transition hover:bg-white"><HistoryRoundedIcon sx={{ fontSize: 17 }} />Ver histórico</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </ModalShell>
 
       <ModalShell
@@ -842,5 +1358,6 @@ export function DashboardView({
         <TradePanel key={modal} markets={markets} updatedAt={updatedAt} initialCoin="solana" initialMode={modal === "swap" ? "swap" : "buy"} unavailable={!!marketError} />
       </ModalShell>
     </div>
+    </MotionConfig>
   );
 }

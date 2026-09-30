@@ -36,7 +36,7 @@ export function useMarket(coinId: string, range: MarketRange) {
       }
     }
     const initial = window.setTimeout(() => void load(), 0);
-    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 30_000);
+    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 60_000);
     return () => { controller.abort(); window.clearTimeout(initial); window.clearInterval(timer); };
   }, [coinId, range, revision]);
 
