@@ -256,6 +256,7 @@ export function DashboardView({
   const [sendStartedAt, setSendStartedAt] = useState(0);
   const [dashboardTab, setDashboardTab] = useState<DashboardTab>("tokens");
   const [balancesVisible, setBalancesVisible] = useState(true);
+  const [performanceOpen, setPerformanceOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -324,7 +325,8 @@ export function DashboardView({
   const usdcQuantity =
     usdc?.current_price && usdc.current_price > 0 ? usdcValue / usdc.current_price : 0;
 
-  const positiveBalanceBackground = "radial-gradient(ellipse 95% 105% at 50% -22%, rgba(49,126,84,0.4), transparent 71%), linear-gradient(160deg, #173424 0%, #18281e 48%, #1d2420 100%)";
+  const positiveBalanceBackground = "radial-gradient(ellipse 62% 66% at 50% 36%, rgba(35,114,69,0.54) 0%, rgba(25,79,51,0.25) 46%, rgba(11,12,14,0) 82%)";
+  const negativeBalanceBackground = "radial-gradient(ellipse 58% 63% at 50% 36%, rgba(88,44,54,0.16) 0%, rgba(11,12,14,0) 78%)";
 
   const assets = [
       {
@@ -687,11 +689,12 @@ export function DashboardView({
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08, duration: 0.56, ease }}
-          className="relative mt-8 overflow-hidden rounded-[28px] border border-white/[0.065] bg-[#1d2022] px-4 pb-11 pt-11 text-center shadow-[0_24px_65px_rgba(0,0,0,.22)] sm:mt-10 sm:px-7 sm:pb-12 sm:pt-12"
+          className="relative isolate mt-7 px-1 pb-8 pt-10 text-center sm:mt-9 sm:pb-9 sm:pt-12"
         >
-          <motion.div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ backgroundImage: positiveBalanceBackground }} initial={false} animate={{ opacity: positive ? 1 : 0 }} transition={{ duration: 0.65, ease }} />
+          <motion.div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[-188px] h-[490px] w-[160vw] max-w-[1300px] -translate-x-1/2 sm:top-[-215px] sm:h-[540px]" style={{ backgroundImage: positiveBalanceBackground }} initial={false} animate={{ opacity: positive ? 1 : 0 }} transition={{ duration: 0.8, ease }} />
+          <motion.div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[-188px] h-[490px] w-[160vw] max-w-[1300px] -translate-x-1/2 sm:top-[-215px] sm:h-[540px]" style={{ backgroundImage: negativeBalanceBackground }} initial={false} animate={{ opacity: negative ? 1 : 0 }} transition={{ duration: 0.8, ease }} />
           <div className="relative z-10">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/46">
             Saldo total
           </p>
           <div className="mt-3 flex items-center justify-center gap-2.5">
@@ -708,7 +711,7 @@ export function DashboardView({
               type="button"
               onClick={() => setBalancesVisible((visible) => !visible)}
               aria-label={balancesVisible ? "Ocultar valores" : "Mostrar valores"}
-              className="mt-2 grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/28 transition hover:bg-white/[0.05] hover:text-white/65"
+              className="mt-2 grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/35 transition duration-200 hover:bg-white/[0.07] hover:text-white/75 active:scale-90"
             >
               {balancesVisible ? (
                 <VisibilityRoundedIcon sx={{ fontSize: 18 }} />
@@ -718,15 +721,29 @@ export function DashboardView({
             </button>
           </div>
 
-          <div className="mt-5 flex items-center justify-center gap-2 text-sm font-semibold tabular-nums">
-            <span className={gainClass}>
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm font-semibold tabular-nums">
+            <motion.span key={performance ? gainPercent.toFixed(2) : "loading"} initial={{ opacity: 0.45, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38, ease }} className={gainClass}>
               {!performance ? marketError ? "Cotação indisponível" : "Atualizando" : balancesVisible ? (portfolioGain > 0 ? "+" : "") + currency.format(portfolioGain) : "••••"}
-            </span>
+            </motion.span>
             <span className={"rounded-md px-2 py-1 text-xs " + gainPillClass}>
               {performance ? formatPercent(gainPercent) : "—"}
             </span>
           </div>
-          <p className="mt-2 text-[10px] font-medium text-white/35">Variação estimada · 24h</p>
+          <button type="button" disabled={!performance} onClick={() => setPerformanceOpen((open) => !open)} aria-expanded={performanceOpen && !!performance} aria-controls="balance-performance-details" className="mx-auto mt-2 flex min-h-8 items-center justify-center gap-1 rounded-full px-2.5 text-[10px] font-medium text-white/42 transition-colors hover:bg-white/[0.045] hover:text-white/72 disabled:cursor-default disabled:hover:bg-transparent">
+            Variação estimada · 24h
+            <KeyboardArrowDownRoundedIcon sx={{ fontSize: 15, transform: performanceOpen && performance ? "rotate(180deg)" : "rotate(0deg)", transition: "transform .25s ease" }} />
+          </button>
+          <AnimatePresence initial={false}>
+            {performanceOpen && performance && (
+              <motion.div id="balance-performance-details" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease }} className="mx-auto max-w-[310px] overflow-hidden text-left">
+                <div className="mt-4 border-t border-white/[0.09] pt-3">
+                  <p className="mb-3 text-[10px] text-white/42">Composição estimada da carteira</p>
+                  <div className="flex items-center justify-between py-1.5 text-[11px]"><span className="text-white/65">Solana <span className="text-white/35">· 52%</span></span><span className={solana && solana.price_change_percentage_24h >= 0 ? "text-[#53db91]" : "text-[#ff8190]"}>{formatPercent(solana?.price_change_percentage_24h ?? 0)}</span></div>
+                  <div className="flex items-center justify-between py-1.5 text-[11px]"><span className="text-white/65">USDC <span className="text-white/35">· 48%</span></span><span className={usdc && usdc.price_change_percentage_24h >= 0 ? "text-[#53db91]" : "text-[#ff8190]"}>{formatPercent(usdc?.price_change_percentage_24h ?? 0)}</span></div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           </div>
         </motion.section>
 
@@ -734,7 +751,7 @@ export function DashboardView({
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.16, duration: 0.56, ease }}
-          className="mt-5 grid grid-cols-3 gap-2.5 sm:gap-3"
+          className="mt-3 grid grid-cols-3 gap-2.5 sm:gap-3"
         >
           {quickActions.map((action) => {
             const Icon = action.icon;
