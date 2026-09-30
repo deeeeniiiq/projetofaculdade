@@ -44,6 +44,17 @@ export function cardStatement(transactions: readonly Transaction[], now = new Da
   const totalPurchasesCents = purchases.reduce((sum, item) => sum + toCents(item.valor), 0);
   const totalPaidCents = billPayments.reduce((sum, item) => sum + toCents(item.valor), 0);
   const outstandingCents = Math.max(0, totalPurchasesCents - totalPaidCents);
+  let paidToAllocate = Math.min(totalPurchasesCents, totalPaidCents);
+  const openPurchases = [...purchases]
+    .sort((a, b) => new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime())
+    .map((transaction) => {
+      const valueCents = toCents(transaction.valor);
+      const paidCents = Math.min(valueCents, paidToAllocate);
+      paidToAllocate -= paidCents;
+      return { transaction, remainingCents: valueCents - paidCents };
+    })
+    .filter((entry) => entry.remainingCents > 0)
+    .reverse();
   const month = brazilMonthKey(now);
   const monthPurchasesCents = purchases.reduce((sum, item) =>
     brazilMonthKey(new Date(item.criado_em)) === month ? sum + toCents(item.valor) : sum, 0);
@@ -51,6 +62,7 @@ export function cardStatement(transactions: readonly Transaction[], now = new Da
   return {
     purchases,
     billPayments,
+    openPurchases,
     outstandingCents,
     availableCents: Math.max(0, CARD_LIMIT_CENTS - outstandingCents),
     monthPurchasesCents,

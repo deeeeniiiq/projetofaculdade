@@ -8,7 +8,6 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import AttachMoneyRoundedIcon from "@mui/icons-material/AttachMoneyRounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ArrowOutwardRoundedIcon from "@mui/icons-material/ArrowOutwardRounded";
-import BoltRoundedIcon from "@mui/icons-material/BoltRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import CollectionsRoundedIcon from "@mui/icons-material/CollectionsRounded";
@@ -93,7 +92,7 @@ const accounts = [
     id: "personal",
     handle: "Solana",
     label: "Conta 1",
-    address: "4VvX9NQGZB7rjBfM7K9yvV5SJ6xPkm3BR9U2mZ5wJ1eR",
+    address: "DEMO-SOL-4VvX9NQGZB7rjBfM7K9yvV5SJ6xPkm3BR9U2mZ5wJ1eR",
     multiplier: 1,
     avatar: "1",
   },
@@ -101,7 +100,7 @@ const accounts = [
     id: "reserve",
     handle: "Reserva",
     label: "Conta 2",
-    address: "8Hb2vRrGQm3PyXQYkT6mU7fW9aN4jL2sE5xC1pV7dK3Z",
+    address: "DEMO-SOL-8Hb2vRrGQm3PyXQYkT6mU7fW9aN4jL2sE5xC1pV7dK3Z",
     multiplier: 0.62,
     avatar: "2",
   },
@@ -109,7 +108,7 @@ const accounts = [
     id: "travel",
     handle: "Viagem",
     label: "Conta 3",
-    address: "6Pa4kQ3vJ8mT2yW7sN5dF9rB1xL6cE4uH3zG7V2qM8aK",
+    address: "DEMO-SOL-6Pa4kQ3vJ8mT2yW7sN5dF9rB1xL6cE4uH3zG7V2qM8aK",
     multiplier: 0.28,
     avatar: "3",
   },
@@ -171,7 +170,7 @@ const searchItems: { label: string; detail: string; keywords: string; target: "r
   { label: "Explorar Solana", detail: "Tokens em alta ao vivo", keywords: "memes memecoins axiom dexscreener radar explorar", target: "memes" },
   { label: "NFTs", detail: "Abrir colecionáveis", keywords: "nft colecao colecionaveis", target: "nfts" },
   { label: "Histórico", detail: "Ver pagamentos e recebimentos", keywords: "atividade historico transacoes pagamentos", target: "activity" },
-  { label: "Resumo", detail: "Ver distribuição e fluxo", keywords: "resumo insights carteira portfolio", target: "insights" },
+  { label: "Minha conta", detail: "Endereço, QR e atalhos da carteira", keywords: "conta endereco qr carteira", target: "insights" },
   ...demoNfts.map((nft) => ({ label: nft.name, detail: nft.collection, keywords: "nft " + nft.name + " " + nft.collection, target: "nfts" as const })),
 ];
 
@@ -222,8 +221,6 @@ function ModalShell({
 
 export function DashboardView({
   transactions,
-  income,
-  expenses,
   balance,
   demoMode,
 }: DashboardViewProps) {
@@ -479,6 +476,8 @@ export function DashboardView({
     setSendError("");
     setSendStartedAt(Date.now());
     setSendProgress(1);
+    const visualStartedAt = Date.now();
+    const secondStage = window.setTimeout(() => setSendProgress(2), 480);
     try {
       const result = await new Promise<Awaited<ReturnType<typeof sendTransfer>>>((resolve, reject) => {
         startTransition(async () => {
@@ -489,14 +488,17 @@ export function DashboardView({
         });
       });
       if (!result.ok) { setSendError(result.error); setSendStep("review"); return; }
+      const remaining = Math.max(0, 1250 - (Date.now() - visualStartedAt));
+      if (remaining) await new Promise<void>((resolve) => window.setTimeout(resolve, remaining));
       setSendProgress(3);
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 430));
       setCreatedTransfer(result.transaction);
       setSendStep("success");
       router.refresh();
     } catch {
       setSendError("Não foi possível confirmar a resposta. Tente novamente: o mesmo identificador evita registrar este envio duas vezes.");
       setSendStep("review");
-    } finally { sending.current = false; }
+    } finally { window.clearTimeout(secondStage); sending.current = false; }
   }
 
   async function copyTransferCode() {
@@ -568,7 +570,7 @@ export function DashboardView({
 
   return (
     <MotionConfig reducedMotion="user">
-    <div className="relative min-h-screen overflow-hidden bg-[#0b0c0e] text-white">
+    <div className="relative min-h-screen overflow-hidden bg-[#060708] text-white">
 
       <main className="relative mx-auto w-full max-w-[760px] px-4 pb-24 pt-5 sm:px-7 sm:pt-7 lg:px-8">
         <motion.header
@@ -644,6 +646,8 @@ export function DashboardView({
                   })}
 
                   <div className="my-2 h-px bg-white/[0.06]" />
+
+                  <button type="button" onClick={() => { setAccountMenuOpen(false); selectTab("insights"); }} className="flex w-full items-center gap-3 rounded-[16px] px-3 py-2.5 text-left text-xs font-semibold text-[#aaaab0] transition hover:bg-white/[0.045] hover:text-white"><span className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.045]"><PersonRoundedIcon sx={{ fontSize: 17 }} /></span>Detalhes da conta</button>
 
                   <button
                     type="button"
@@ -768,7 +772,7 @@ export function DashboardView({
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => openAction(action.id)}
-                className="group flex min-h-[96px] min-w-0 flex-col items-center justify-center gap-2 rounded-[20px] border border-white/[0.045] bg-[#25272b] px-1.5 transition-colors hover:border-white/[0.1] hover:bg-[#2e3035] sm:min-h-[106px]"
+                className="group flex min-h-[96px] min-w-0 flex-col items-center justify-center gap-2 rounded-[20px] border border-white/[0.045] bg-[#18191b] px-1.5 transition-colors hover:border-white/[0.1] hover:bg-[#222326] sm:min-h-[106px]"
               >
                 <Icon
                   sx={{ fontSize: { xs: 24, sm: 27 } }}
@@ -788,15 +792,15 @@ export function DashboardView({
         </div>
 
         <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32, duration: 0.54, ease }} className="mt-6" aria-label="Acesso ao cartão">
-          <Link href="/dashboard/cartao" className="group flex min-h-[82px] items-center gap-3.5 rounded-[18px] border border-white/[0.05] bg-[#25272b] px-3.5 py-3 transition-colors hover:bg-[#2e3035]">
-            <span className="grid h-12 w-[68px] shrink-0 place-items-center rounded-[12px] border border-white/[0.1] bg-[linear-gradient(135deg,#45404e,#1d1f24)] text-[#c5b8fb]"><CreditCardRoundedIcon sx={{ fontSize: 25 }} /></span>
+          <Link href="/dashboard/cartao" className="group flex min-h-[82px] items-center gap-3.5 rounded-[18px] border border-white/[0.05] bg-[#151618] px-3.5 py-3 transition-colors hover:bg-[#1e1f22]">
+            <span className="grid h-12 w-[68px] shrink-0 place-items-center rounded-[12px] bg-[linear-gradient(120deg,#e4d2f7,#e8eed8_55%,#d5e9f6)] text-[#5d5377]"><CreditCardRoundedIcon sx={{ fontSize: 25 }} /></span>
             <span className="min-w-0 flex-1"><span className="block text-[12px] font-semibold text-[#ededef]">Cartão de crédito</span><span className="mt-1 block text-[10px] text-white/45">Fatura {currency.format(cardSummary.outstandingCents / 100)} ·•••• 2048</span></span>
             <ArrowOutwardRoundedIcon sx={{ fontSize: 18 }} className="shrink-0 text-white/45 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
           </Link>
         </motion.section>
 
         <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.48, ease }} className="mt-2.5" aria-label="Acesso ao histórico">
-          <button type="button" onClick={() => selectTab("activity")} className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#25272b] px-4 py-3 text-left transition-colors hover:bg-[#2e3035]">
+          <button type="button" onClick={() => selectTab("activity")} className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#151618] px-4 py-3 text-left transition-colors hover:bg-[#1e1f22]">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.065] text-[#c4c6ca]"><HistoryRoundedIcon sx={{ fontSize: 19 }} /></span>
             <span className="min-w-0 flex-1"><span className="block text-[12px] font-semibold text-[#e6e7e9]">Transações</span><span className="mt-0.5 block text-[10px] text-[#9b9ea4]">{transactions.length} registros no histórico</span></span>
             <ArrowOutwardRoundedIcon sx={{ fontSize: 18 }} className="text-[#a4a6ac]" />
@@ -808,7 +812,7 @@ export function DashboardView({
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45, duration: 0.58, ease }}
-          className="mt-6 grid grid-cols-4 gap-1 rounded-[18px] border border-white/[0.045] bg-[#17191c] p-1.5"
+          className="mt-6 grid grid-cols-4 gap-1 rounded-[18px] border border-white/[0.045] bg-[#101113] p-1.5"
         >
           {dashboardTabs.map((tab) => {
             const Icon = tab.icon;
@@ -827,7 +831,7 @@ export function DashboardView({
                 {active && (
                   <motion.span
                     layoutId="dashboard-tab"
-                    className="absolute inset-0 rounded-[13px] bg-[#303237] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]"
+                    className="absolute inset-0 rounded-[13px] bg-[#242529] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045)]"
                     transition={{ duration: 0.28, ease }}
                   />
                 )}
@@ -864,7 +868,7 @@ export function DashboardView({
 
                 return (
                   <motion.div key={asset.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.055, duration: 0.36, ease }}>
-                    <Link href={"/dashboard/crypto?coin=" + asset.id} className="flex min-h-[68px] min-w-0 items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#25272b] px-3.5 py-2.5 transition hover:border-white/[0.09] hover:bg-[#2e3035] active:scale-[0.99] sm:px-4">
+                    <Link href={"/dashboard/crypto?coin=" + asset.id} className="flex min-h-[68px] min-w-0 items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#121315] px-3.5 py-2.5 transition hover:border-white/[0.09] hover:bg-[#1d1e21] active:scale-[0.99] sm:px-4">
                       <CoinIcon id={asset.id} size={36} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[14px] font-semibold tracking-[-0.025em] text-[#f2f3f4]">{asset.name}</p>
@@ -880,11 +884,11 @@ export function DashboardView({
               })}
               <div className="pt-5"><MemeRadar compact /></div>
               <div className="my-4 grid grid-cols-2 gap-2">
-                <button type="button" onClick={()=>selectTab("activity")} className="group rounded-[18px] border border-white/[0.045] bg-[#25272b] p-4 text-left transition hover:bg-[#2e3035]">
+                <button type="button" onClick={()=>selectTab("activity")} className="group rounded-[18px] border border-white/[0.045] bg-[#151618] p-4 text-left transition hover:bg-[#202124]">
                   <HistoryRoundedIcon sx={{fontSize:19}} className="text-[#b9aaf5]" />
                   <p className="mt-3 text-xs font-semibold text-white/75">Histórico</p><p className="mt-1 text-[10px] text-white/40">{transactions.length} registros · filtros e CSV</p>
                 </button>
-                <Link href={transactions[0] ? `/dashboard/comprovante/${transactions[0].id}` : "/dashboard/nova-transacao"} className="rounded-[18px] border border-white/[0.045] bg-[#25272b] p-4 transition hover:bg-[#2e3035]">
+                <Link href={transactions[0] ? `/dashboard/comprovante/${transactions[0].id}` : "/dashboard/nova-transacao"} className="rounded-[18px] border border-white/[0.045] bg-[#151618] p-4 transition hover:bg-[#202124]">
                   <ReceiptLongRoundedIcon sx={{fontSize:19}} className="text-[#b8c7d4]" />
                   <p className="mt-3 text-xs font-semibold text-white/75">{transactions[0] ? "Último comprovante" : "Primeiro registro"}</p><p className="mt-1 truncate text-[10px] text-white/40">{transactions[0] ? transactions[0].descricao + " · PDF disponível" : "Adicione uma receita ou despesa"}</p>
                 </Link>
@@ -896,7 +900,7 @@ export function DashboardView({
           {dashboardTab === "memes" && (
             <motion.section key="memes" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.28, ease }} className="mt-5">
               <MemeRadar compact />
-              <Link href="/dashboard/memes" className="mt-3 flex h-10 items-center justify-center gap-1 rounded-xl border border-white/[0.055] bg-[#25272b] text-[11px] font-semibold text-[#c8c9ce] transition hover:bg-[#2e3035]">Ver todos os tokens <ArrowOutwardRoundedIcon sx={{ fontSize: 15 }} /></Link>
+              <Link href="/dashboard/memes" className="mt-3 flex h-10 items-center justify-center gap-1 rounded-xl border border-white/[0.055] bg-[#17181a] text-[11px] font-semibold text-[#c8c9ce] transition hover:bg-[#25262a]">Ver todos os tokens <ArrowOutwardRoundedIcon sx={{ fontSize: 15 }} /></Link>
             </motion.section>
           )}
 
@@ -920,7 +924,7 @@ export function DashboardView({
                     whileHover={{ y: -3 }}
                     whileTap={{ scale: 0.985 }}
                     onClick={() => setToast(nft.name + " · visualização demonstrativa")}
-                    className="group overflow-hidden rounded-[20px] border border-white/[0.045] bg-[#25272b] text-left transition hover:border-white/[0.09]"
+                    className="group overflow-hidden rounded-[20px] border border-white/[0.045] bg-[#151618] text-left transition hover:border-white/[0.09]"
                   >
                     <div className="relative aspect-square overflow-hidden" style={{ backgroundImage: nft.background }}>
                       <div className="absolute left-[18%] top-[18%] h-[42%] w-[42%] rounded-full border border-white/10 bg-white/[0.035] backdrop-blur-[2px] transition duration-500 group-hover:scale-110" />
@@ -954,32 +958,15 @@ export function DashboardView({
           )}
 
           {dashboardTab === "insights" && (
-            <motion.section key="insights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.28, ease }} className="mt-5 space-y-3">
-              <div className="rounded-[22px] border border-white/[0.045] bg-[#25272b] p-4 sm:p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 text-[#dfe1e3]"><BoltRoundedIcon sx={{ fontSize: 18 }} /><h2 className="text-[13px] font-semibold">Visão da carteira</h2></div>
-                    <p className="mt-1 text-[10px] leading-4 text-[#77797e]">Leitura rápida do seu portfólio e do fluxo financeiro.</p>
-                  </div>
-                  <span className={"rounded-full px-2.5 py-1 text-[9px] font-bold " + (positive ? "bg-[#67df9c]/10 text-[#67df9c]" : negative ? "bg-[#ff6e7f]/10 text-[#ff7887]" : "bg-white/[0.05] text-white/40")}>{positive ? "Mercado em alta" : negative ? "Mercado em baixa" : "Sem variação"}</span>
-                </div>
-                <div className="mt-5 grid grid-cols-3 gap-2">
-                  <div className="rounded-[16px] bg-black/20 p-3"><p className="text-[8px] font-bold uppercase tracking-[0.12em] text-white/28">Entradas</p><p className="mt-2 truncate text-[12px] font-semibold text-[#dfe1e3]">{balancesVisible ? currency.format(income * account.multiplier) : "••••"}</p></div>
-                  <div className="rounded-[16px] bg-black/20 p-3"><p className="text-[8px] font-bold uppercase tracking-[0.12em] text-white/28">Saídas</p><p className="mt-2 truncate text-[12px] font-semibold text-[#dfe1e3]">{balancesVisible ? currency.format(expenses * account.multiplier) : "••••"}</p></div>
-                  <div className="rounded-[16px] bg-black/20 p-3"><p className="text-[8px] font-bold uppercase tracking-[0.12em] text-white/28">Eventos</p><p className="mt-2 text-[12px] font-semibold text-[#dfe1e3]">{transactions.length}</p></div>
-                </div>
+            <motion.section key="insights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.28, ease }} className="mt-5">
+              <div className="flex items-end justify-between gap-3 px-1 pb-5"><div><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/35">CARTEIRA</p><h2 className="mt-1 text-[19px] font-semibold tracking-[-0.04em] text-white">{account.label}</h2></div><span className="text-[10px] text-[#b9aaf5]">Solana · demo</span></div>
+              <div className="rounded-[19px] border border-white/[0.045] bg-[#121315] px-4 py-5 sm:px-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/36">Endereço da conta</p>
+                <p className="mt-3 break-all font-mono text-[12px] leading-6 text-white/80">{account.address}</p>
+                <div className="mt-5 flex gap-2"><button type="button" onClick={copyAddress} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#25252b] px-3.5 text-[11px] font-semibold text-white/80 transition hover:bg-[#303037]"><ContentCopyRoundedIcon sx={{ fontSize: 16 }} />Copiar</button><button type="button" onClick={() => setModal("receive")} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#25252b] px-3.5 text-[11px] font-semibold text-white/80 transition hover:bg-[#303037]"><QrCodeScannerRoundedIcon sx={{ fontSize: 16 }} />Ver QR</button></div>
               </div>
-
-              <div className="rounded-[22px] border border-white/[0.045] bg-[#25272b] p-4 sm:p-5">
-                <div className="flex items-center justify-between gap-4"><div><p className="text-[11px] font-semibold text-[#e4e5e6]">Distribuição da carteira</p><p className="mt-1 text-[9px] text-[#6f7175]">Estimativa visual baseada no saldo atual</p></div><span className="text-[10px] font-semibold text-white/35">SOL / USDC</span></div>
-                <div className="mt-4 flex h-2 overflow-hidden rounded-full bg-white/[0.04]"><div className="w-[52%] rounded-full bg-[#b9aaf5]" /><div className="w-[48%] bg-[#7f848b]/55" /></div>
-                <div className="mt-3 grid grid-cols-2 gap-3 text-[10px]"><div className="flex items-center justify-between"><span className="text-white/35">Solana</span><span className="font-semibold text-white/70">52%</span></div><div className="flex items-center justify-between"><span className="text-white/35">USDC</span><span className="font-semibold text-white/70">48%</span></div></div>
-              </div>
-
-              <button type="button" onClick={() => setSearchOpen(true)} className="flex w-full items-center justify-between rounded-[20px] border border-white/[0.045] bg-[#25272b] px-4 py-3.5 text-left transition hover:bg-[#2e3035]">
-                <span><span className="block text-[11px] font-semibold text-[#e4e5e6]">Busca rápida</span><span className="mt-1 block text-[9px] text-[#6f7175]">Ações, ativos e colecionáveis</span></span>
-                <span className="rounded-lg border border-white/[0.07] bg-black/20 px-2 py-1 text-[9px] font-semibold text-white/34">Ctrl K</span>
-              </button>
+              <p className="mt-3 px-1 text-[10px] leading-5 text-white/35">Endereço de demonstração. Esta conta não assina transações na rede Solana.</p>
+              <div className="mt-8 border-t border-white/[0.07]"><button type="button" onClick={() => selectTab("activity")} className="flex min-h-14 w-full items-center justify-between border-b border-white/[0.07] px-1 text-left text-[12px] font-medium text-white/72 transition hover:text-white"><span className="flex items-center gap-3"><HistoryRoundedIcon sx={{ fontSize: 18 }} className="text-[#b9aaf5]" />Histórico da carteira</span><ArrowOutwardRoundedIcon sx={{ fontSize: 17 }} /></button><Link href="/dashboard/cartao" className="flex min-h-14 items-center justify-between border-b border-white/[0.07] px-1 text-[12px] font-medium text-white/72 transition hover:text-white"><span className="flex items-center gap-3"><CreditCardRoundedIcon sx={{ fontSize: 18 }} className="text-[#b9aaf5]" />Cartão virtual</span><ArrowOutwardRoundedIcon sx={{ fontSize: 17 }} /></Link></div>
             </motion.section>
           )}
         </AnimatePresence>
@@ -1059,7 +1046,7 @@ export function DashboardView({
         </div>
 
         <div className="mt-4 rounded-[18px] border border-white/[0.06] bg-black/20 px-4 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/30">Endereço Solana</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/30">Endereço demonstrativo</p>
           <p className="mt-2 break-all text-xs leading-5 text-[#c7c7cb]">{account.address}</p>
         </div>
 
@@ -1322,7 +1309,7 @@ export function DashboardView({
               <p className="mt-5 text-lg font-semibold tracking-[-0.03em] text-white">Registrando {currency.format(sendNumericAmount)}</p>
               <p className="mt-1 text-xs text-white/32">para {sendRecipient}</p>
               <div className="mx-auto mt-6 max-w-[292px] text-left">
-                {["Formato revisado", "Salvando no histórico", "Liberando comprovante"].map((label, index) => {
+                {["Dados revisados", "Registrando simulação", "Preparando comprovante"].map((label, index) => {
                   const stage = index + 1;
                   const done = sendProgress >= stage;
                   const current = sendProgress === index;

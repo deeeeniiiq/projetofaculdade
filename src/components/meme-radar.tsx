@@ -131,6 +131,10 @@ export function MemeRadar({ compact = false }: { compact?: boolean }) {
     else if (filter === "new") result = [...result].sort((a, b) => (Date.parse(b.createdAt ?? "") || 0) - (Date.parse(a.createdAt ?? "") || 0));
     return compact ? result.slice(0, 5) : result;
   }, [feed, query, filter, favorites, compact]);
+  const visibleMarket = useMemo(() => tokens.reduce((total, token) => ({
+    volume: total.volume + token.volume24hUsd,
+    liquidity: total.liquidity + token.liquidityUsd,
+  }), { volume: 0, liquidity: 0 }), [tokens]);
 
   function toggleFavorite(address: string) {
     const next = favorites.includes(address) ? favorites.filter((item) => item !== address) : [...favorites, address];
@@ -170,34 +174,37 @@ export function MemeRadar({ compact = false }: { compact?: boolean }) {
         <header className="mb-7">
           <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-[11px] text-[#8c9892] transition hover:text-white"><ArrowBackRoundedIcon sx={{ fontSize: 15 }} />Sua carteira</Link>
           <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-            <div><h1 className="text-[36px] font-semibold leading-none tracking-[-0.065em] sm:text-[48px]">Explorar Solana<span className="text-[#b9aaf5]">.</span></h1><p className="mt-3 max-w-[560px] text-xs leading-5 text-[#8a9690]">Preços, liquidez e atividade dos tokens em destaque na rede.</p></div>
+            <div><h1 className="text-[36px] font-semibold leading-none tracking-[-0.065em] sm:text-[48px]">Explorar Solana<span className="text-[#b9aaf5]">.</span></h1><p className="mt-3 max-w-[560px] text-xs leading-5 text-white/42">Descubra pares em movimento, com preços e liquidez atualizados.</p></div>
             <button type="button" onClick={() => void refresh()} disabled={refreshing} className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.045] px-3 text-[11px] font-semibold text-[#d4ded7] transition hover:bg-white/[0.08] disabled:opacity-50"><RefreshRoundedIcon sx={{ fontSize: 17 }} className={refreshing ? "animate-spin" : ""} />Atualizar</button>
           </div>
         </header>
       )}
 
-      {!compact && <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
-        {[{ label: "Tokens", value: String(feed?.tokens.length ?? "—") }, { label: "Rede", value: "Solana" }, { label: "Fonte", value: feed?.source ?? "Conectando" }].map((stat) => <div key={stat.label} className="min-w-0 rounded-[18px] border border-white/[0.055] bg-[#25272b] px-3 py-3.5 sm:px-4"><p className="text-[9px] font-semibold uppercase tracking-[0.11em] text-white/35">{stat.label}</p><p className="mt-2 truncate text-[12px] font-semibold text-white sm:text-[15px]">{stat.value}</p></div>)}
+      {!compact && <div className="mb-6 grid grid-cols-2 gap-4 border-y border-white/[0.07] py-5 sm:gap-10">
+        <div><p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/37">Volume · 24h</p><motion.p key={visibleMarket.volume} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-[clamp(1.15rem,3.5vw,1.7rem)] font-semibold tracking-[-0.045em] text-white">{feed ? compactUsd.format(visibleMarket.volume) : "—"}</motion.p></div>
+        <div><p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/37">Liquidez</p><motion.p key={visibleMarket.liquidity} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-[clamp(1.15rem,3.5vw,1.7rem)] font-semibold tracking-[-0.045em] text-white">{feed ? compactUsd.format(visibleMarket.liquidity) : "—"}</motion.p></div>
+        <p className="col-span-2 -mt-2 text-[9px] text-white/26">Totais dos pares exibidos nesta seleção</p>
       </div>}
 
       {!compact && <div className="mb-4 space-y-3">
-        <label className="flex h-11 items-center gap-2.5 rounded-[15px] border border-white/[0.065] bg-[#25272b] px-3.5 text-[#8c9893] focus-within:border-[#b9aaf5]/45"><SearchRoundedIcon sx={{ fontSize: 19 }} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar token ou contrato" className="min-w-0 flex-1 bg-transparent text-[12px] text-white outline-none placeholder:text-[#78827e]" /></label>
+        <label className="flex h-11 items-center gap-2.5 rounded-[15px] border border-white/[0.065] bg-[#111214] px-3.5 text-[#8c9893] focus-within:border-[#b9aaf5]/45"><SearchRoundedIcon sx={{ fontSize: 19 }} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar token ou contrato" className="min-w-0 flex-1 bg-transparent text-[12px] text-white outline-none placeholder:text-[#78827e]" /></label>
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1"><FilterAltRoundedIcon sx={{ fontSize: 17 }} className="mr-1 shrink-0 text-[#81838c]" />{filters.map((item) => <button key={item.id} type="button" aria-pressed={filter === item.id} onClick={() => setFilter(item.id)} className={"shrink-0 rounded-full px-3 py-2 text-[10px] font-semibold transition " + (filter === item.id ? "bg-[#c7bbf8] text-[#241c39]" : "bg-white/[0.055] text-[#a2a3aa] hover:bg-white/[0.1]")}>{item.label}</button>)}</div>
       </div>}
 
-      <div className="overflow-hidden rounded-[21px] border border-white/[0.055] bg-[#25272b]">
+      <div className="overflow-hidden rounded-[21px] border border-white/[0.045] bg-[#111214]">
         {!compact && <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/33"><span>Token</span><span>Preço / 24h</span></div>}
-        {tokens.length > 0 ? <AnimatePresence initial={false}>{tokens.map((token, index) => <motion.div key={token.address} layout initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.24, ease, delay: Math.min(index * 0.025, 0.12) }} className="group flex min-w-0 items-center border-b border-white/[0.055] last:border-b-0 hover:bg-white/[0.035]">
-          <button type="button" onClick={() => openToken(token)} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3.5 text-left sm:px-4 sm:py-4">
+        {tokens.length > 0 ? <AnimatePresence initial={false}>{tokens.map((token, index) => <motion.div key={token.address} layout initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.24, ease, delay: Math.min(index * 0.025, 0.12) }} className="group flex min-w-0 items-center border-b border-white/[0.045] last:border-b-0 hover:bg-white/[0.035]">
+          <button type="button" onClick={() => openToken(token)} className="grid min-w-0 flex-1 grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3 py-3.5 text-left sm:grid-cols-[45px_minmax(0,1fr)_auto] sm:px-4 sm:py-4">
             <TokenLogo token={token} size={compact ? 40 : 45} />
-            <span className="min-w-0 flex-1"><span className="flex items-center gap-1.5"><span className="truncate text-[13px] font-semibold text-[#f0f3f1] sm:text-sm">{token.name}</span><span className="hidden shrink-0 rounded-[5px] bg-white/[0.06] px-1.5 py-0.5 text-[8px] font-bold text-white/36 sm:inline">SOL</span></span><span className="mt-0.5 block truncate text-[10px] text-[#929c99]">{token.symbol} <span className="px-1 text-white/15">·</span> Vol {compactUsd.format(token.volume24hUsd)}</span></span>
+            <span className="min-w-0"><span className="block truncate text-[13px] font-semibold text-[#f0f3f1] sm:text-sm">{token.name}</span><span className="mt-0.5 block truncate text-[10px] text-[#929c99]">{token.symbol}</span></span>
             <span className="shrink-0 text-right"><span className="block text-[12px] font-semibold tabular-nums text-[#eff2f0] sm:text-sm">{formatPrice(token.priceUsd)}</span><span className={"mt-0.5 block text-[10px] font-semibold tabular-nums " + (token.change24h > 0 ? "text-[#6de09c]" : token.change24h < 0 ? "text-[#fa8191]" : "text-white/50")}>{formatChange(token.change24h)}</span></span>
+            <span className="col-span-3 flex min-w-0 flex-wrap gap-x-4 gap-y-1 border-t border-white/[0.045] pt-2 text-[9px] font-medium text-white/42"><span>Vol {compactUsd.format(token.volume24hUsd)}</span><span>Liq {compactUsd.format(token.liquidityUsd)}</span></span>
           </button>
           {!compact && <button type="button" onClick={() => toggleFavorite(token.address)} aria-label={favorites.includes(token.address) ? `Remover ${token.name} dos favoritos` : `Favoritar ${token.name}`} aria-pressed={favorites.includes(token.address)} className={"mr-3 grid h-9 w-9 shrink-0 place-items-center rounded-full transition hover:bg-white/[0.07] " + (favorites.includes(token.address) ? "text-[#d5edac]" : "text-[#6d7773]")}>{favorites.includes(token.address) ? <StarRoundedIcon sx={{ fontSize: 19 }} /> : <StarBorderRoundedIcon sx={{ fontSize: 19 }} />}</button>}
         </motion.div>)}</AnimatePresence> : <div className="grid min-h-28 place-items-center px-5 text-center text-xs text-[#929d97]">{error ? <div><p>{error}</p><button type="button" onClick={() => void refresh()} className="mt-2 text-[#a8d6b7] underline">Tentar novamente</button></div> : feed ? filter === "favorites" ? "Sua lista está vazia. Toque na estrela para guardar um token." : "Nenhum token corresponde a este filtro." : <div className="w-full space-y-2"><div className="market-skeleton h-10 rounded-xl" /><div className="market-skeleton h-10 rounded-xl" /></div>}</div>}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2 px-1 text-[9px] text-[#6f7b74]"><span className="flex items-center gap-1.5"><span className={"h-1.5 w-1.5 rounded-full " + (error ? "bg-[#a37f78]" : "bg-[#6fd69c]")} />{feed ? `${feed.mode === "trending" ? "Tendências" : "Perfis recentes"} · ${feed.source}` : error ? "Sem atualização" : "Conectando ao mercado"}</span><span>{feed ? new Date(feed.updatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</span></div>
+      <div className="mt-3 flex items-center justify-between gap-2 px-1 text-[9px] text-white/34"><span className="flex items-center gap-1.5"><span className={"h-1.5 w-1.5 rounded-full " + (error ? "bg-[#a37f78]" : "bg-[#6fd69c]")} />{feed ? "Cotações atualizadas" : error ? "Sem atualização" : "Conectando ao mercado"}</span><span>{feed ? new Date(feed.updatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</span></div>
       {!compact && <p className="mt-5 max-w-[680px] text-[10px] leading-[1.6] text-[#77837b]">Dados de terceiros podem atrasar. Tokens em tendência não pertencem à sua carteira. Confira o contrato, a liquidez e os riscos antes de operar. Este painel não executa ordens.</p>}
 
       <Dialog open={selected !== null} onClose={() => setSelected(null)} fullWidth maxWidth="sm" slotProps={{ paper: { sx: { borderRadius: "24px", background: "#1a1e1f", color: "#fff", margin: "12px", width: "calc(100% - 24px)", maxHeight: "calc(100% - 24px)" } }, backdrop: { sx: { background: "rgba(0,0,0,.74)", backdropFilter: "blur(8px)" } } }}>

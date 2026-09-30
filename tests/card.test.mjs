@@ -30,3 +30,14 @@ test("São Paulo calendar month defines card statement boundaries", () => {
   assert.equal(statement.monthPurchasesCents, 3000);
   assert.equal(statement.outstandingCents, 7000);
 });
+
+test("partial bill payments settle oldest purchases first and preserve the open statement", () => {
+  const transactions = [
+    entry("old", 80, "Cartão de crédito", "despesa", "2026-09-01T12:00:00.000Z"),
+    entry("new", 50, "Cartão de crédito", "despesa", "2026-09-15T12:00:00.000Z"),
+    entry("bill", 95, "Pagamento de fatura", "despesa", "2026-09-20T12:00:00.000Z"),
+  ];
+  const statement = cardStatement(transactions);
+  assert.equal(statement.outstandingCents, 3500);
+  assert.deepEqual(statement.openPurchases.map((item) => [item.transaction.id, item.remainingCents]), [["new", 3500]]);
+});

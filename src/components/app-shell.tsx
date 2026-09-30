@@ -37,9 +37,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <MotionConfig reducedMotion="user" transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}>
     <WalletLock>
-      <div className="min-h-screen bg-[#0b0c0e] text-white">
+      <div className="min-h-screen bg-[#060708] text-white">
         <div className={`mx-auto grid min-h-screen ${walletHome ? "max-w-none grid-cols-1" : "max-w-[1540px] grid-cols-1 lg:grid-cols-[238px_1fr]"}`}>
-          <aside className={`${walletHome ? "hidden" : "sticky top-0 hidden h-screen border-r border-white/[0.055] bg-[#0d0e10]/94 px-4 py-6 backdrop-blur-xl lg:flex lg:flex-col"}`}>
+          <aside className={`${walletHome ? "hidden" : "sticky top-0 hidden h-screen border-r border-white/[0.055] bg-[#0a0b0d]/94 px-4 py-6 backdrop-blur-xl lg:flex lg:flex-col"}`}>
             <Link href="/dashboard" className="flex items-center gap-3 px-2.5">
               <motion.span whileHover={{ rotate: -5, scale: 1.04 }} className="grid h-10 w-10 place-items-center rounded-[14px] bg-[#302d3b] text-[#c7bbf8] shadow-[0_8px_28px_rgba(0,0,0,0.2)] ring-1 ring-inset ring-white/[0.06]">
                 <span className="text-lg font-black tracking-[-0.08em]">S</span>
@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <main className={`min-w-0 ${walletHome ? "pb-0" : "pb-24 lg:pb-0"}`}>{children}</main>
 
-          <motion.nav initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42, duration: 0.58, ease: [0.22, 1, 0.36, 1] }} className="fixed inset-x-3 bottom-3 z-40 flex h-16 items-center justify-around rounded-[22px] border border-white/[0.07] bg-[#191a1c]/94 px-2 shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden">
+          <motion.nav initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42, duration: 0.58, ease: [0.22, 1, 0.36, 1] }} className="fixed inset-x-3 bottom-3 z-40 flex h-16 items-center justify-around rounded-[22px] border border-white/[0.07] bg-[#111214]/94 px-2 shadow-[0_18px_50px_rgba(0,0,0,0.52)] backdrop-blur-2xl lg:hidden">
             {mobileNavItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href, item.exact);

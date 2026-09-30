@@ -73,34 +73,42 @@ export function buildReceiptPdf(transaction: Transaction) {
     ["Identificador", code],
   ] as const;
 
-  let content = "q\n0.067 0.071 0.078 rg 0 0 595 842 re f\nQ\n";
-  content += "0.18 0.63 0.39 rg 0 837 595 5 re f\n";
-  content += drawText("SALDO / REGISTRO DA CARTEIRA", 42, 790, 10, "F2", [0.4, 0.87, 0.61]);
-  content += drawText("COMPROVANTE", 42, 756, 24, "F2", [0.95, 0.95, 0.96]);
-  content += drawText("SIMULAÇÃO ACADÊMICA", 42, 729, 10, "F2", [0.4, 0.87, 0.61]);
-  content += drawText(amount, 42, 677, 36, "F2", isIncome ? [0.4, 0.87, 0.61] : [0.96, 0.96, 0.97]);
-  content += "0.15 0.16 0.17 RG 42 650 m 553 650 l S\n";
+  let content = "0.975 0.976 0.98 rg 0 0 595 842 re f\n";
+  content += "0.055 0.059 0.067 rg 0 744 595 98 re f\n";
+  content += "0.73 0.67 0.96 rg 42 744 104 3 re f\n";
+  content += drawText("saldo.", 42, 785, 24, "F2", [0.98, 0.98, 0.99]);
+  content += drawText("CARTEIRA VIRTUAL", 431, 788, 9, "F2", [0.67, 0.69, 0.73]);
+  content += drawText("REGISTRO DEMONSTRATIVO", 42, 710, 9, "F2", [0.41, 0.35, 0.65]);
+  content += drawText("Comprovante", 42, 678, 21, "F2", [0.11, 0.12, 0.14]);
+  content += drawText(amount, 42, 623, Math.min(35, Math.floor(510 / Math.max(amount.length * 0.58, 1))), "F2", isIncome ? [0.12, 0.43, 0.29] : [0.12, 0.13, 0.15]);
+  content += "0.91 0.89 0.97 rg 42 579 152 25 re f\n";
+  content += drawText("SIMULAÇÃO REGISTRADA", 52, 587, 9, "F2", [0.35, 0.29, 0.53]);
+  content += "0.86 0.87 0.89 RG 42 560 m 553 560 l S\n";
 
-  let y = 626;
+  let y = 543;
   for (const [label, rawValue] of rows) {
-    content += drawText(label, 42, y, 9, "F1", [0.55, 0.56, 0.58]);
-    const wrapped = lines(rawValue);
-    wrapped.forEach((line, index) => { content += drawText(line, 204, y - index * 14, 10, "F1"); });
-    y -= wrapped.length * 14 + 19;
-    content += `0.12 0.13 0.14 RG 42 ${y + 12} m 553 ${y + 12} l S\n`;
+    const wrapped = lines(rawValue, 77);
+    content += drawText(label.toUpperCase(), 42, y, 8, "F2", [0.48, 0.5, 0.53]);
+    wrapped.forEach((line, index) => {
+      content += drawText(line, 42, y - 18 - index * 13, 10.5, "F1", [0.13, 0.14, 0.16]);
+    });
+    y -= 41 + (wrapped.length - 1) * 13;
+    content += `0.91 0.91 0.92 RG 42 ${y + 9} m 553 ${y + 9} l S\n`;
   }
 
   const qr = QRCode.create(code, { errorCorrectionLevel: "M" }).modules;
-  const unit = 2;
+  const unit = 2.7;
   const qrSize = (qr.size + 8) * unit;
-  content += `1 1 1 rg 42 64 ${qrSize} ${qrSize} re f\n0.067 0.071 0.078 rg\n`;
+  content += `1 1 1 rg 42 83 ${qrSize} ${qrSize} re f\n0.09 0.1 0.12 rg\n`;
   for (let row = 0; row < qr.size; row++) for (let col = 0; col < qr.size; col++) {
-    if (qr.get(row,col)) content += `${50+col*unit} ${64+qrSize-8-(row+1)*unit} ${unit} ${unit} re f\n`;
+    if (qr.get(row, col)) content += `${42 + 4 * unit + col * unit} ${83 + qrSize - 4 * unit - (row + 1) * unit} ${unit} ${unit} re f\n`;
   }
-  content += drawText("QR do identificador", 130, 113, 10, "F2");
-  content += drawText("Registro interno. Não comprova liquidação bancária", 130, 94, 9);
-  content += drawText("ou transferência na blockchain.", 130, 80, 9);
-  content += drawText("Dados informados pelo usuário. Saldo / Projeto acadêmico.", 42, 36, 8, "F1", [0.5, 0.52, 0.54]);
+  content += drawText("VERIFIQUE O IDENTIFICADOR", 152, 157, 9, "F2", [0.45, 0.46, 0.49]);
+  content += drawText(code, 152, 137, 12, "F2", [0.13, 0.14, 0.16]);
+  content += drawText("QR e código identificam este registro interno.", 152, 116, 9, "F1", [0.45, 0.46, 0.49]);
+  content += "0.86 0.87 0.89 RG 42 73 m 553 73 l S\n";
+  content += drawText("Este documento não comprova pagamento bancário ou transferência na blockchain.", 42, 54, 8.5, "F1", [0.42, 0.44, 0.47]);
+  content += drawText("Dados informados pelo usuário. Saldo - projeto acadêmico.", 42, 39, 8.5, "F1", [0.42, 0.44, 0.47]);
 
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",

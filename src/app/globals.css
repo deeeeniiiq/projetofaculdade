@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b0c0e;
+  --background: #060708;
   --foreground: #f2f3f4;
 }
 
@@ -58,6 +58,55 @@ button:focus-visible, a:focus-visible, select:focus-visible {
   to { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 0 round 18px); }
 }
 
+.wallet-card-3d {
+  box-shadow: 0 28px 65px rgba(0, 0, 0, .52), 0 8px 22px rgba(102, 82, 145, .08);
+  transform-style: preserve-3d;
+}
+
+.wallet-card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 1px solid rgba(255, 255, 255, .38);
+}
+
+.wallet-card-front {
+  transform: translateZ(1px);
+  background:
+    radial-gradient(ellipse at 16% 82%, rgba(239, 206, 246, .92), transparent 43%),
+    radial-gradient(ellipse at 70% 76%, rgba(198, 245, 213, .9), transparent 45%),
+    radial-gradient(ellipse at 87% 16%, rgba(215, 220, 255, .9), transparent 43%),
+    linear-gradient(126deg, #e1d2f8 0%, #f4dce7 31%, #e8f3d9 62%, #d4e7f6 100%);
+}
+
+.wallet-card-back {
+  transform: rotateY(180deg) translateZ(1px);
+  background:
+    radial-gradient(ellipse at 18% 20%, rgba(214, 234, 255, .8), transparent 42%),
+    radial-gradient(ellipse at 80% 70%, rgba(230, 207, 246, .86), transparent 43%),
+    linear-gradient(125deg, #e5e5fa, #dcf2e1 48%, #f4e0ee);
+}
+
+.wallet-card-sheen {
+  background: conic-gradient(from 25deg at 55% 45%, transparent 0deg, rgba(255,255,255,.35) 60deg, transparent 130deg, rgba(255,255,255,.28) 220deg, transparent 290deg);
+  mix-blend-mode: soft-light;
+  animation: wallet-holo-drift 13s ease-in-out infinite alternate;
+}
+
+.wallet-card-orbit {
+  width: 80%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255,255,255,.34);
+  border-radius: 50%;
+}
+
+.wallet-card-orbit-one { top: -56%; right: -18%; }
+.wallet-card-orbit-two { top: -36%; right: -32%; }
+
+@keyframes wallet-holo-drift {
+  from { transform: translate3d(-8%, -4%, 0) rotate(-8deg) scale(1.17); opacity: .54; }
+  to { transform: translate3d(7%, 5%, 0) rotate(9deg) scale(1.25); opacity: .82; }
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
@@ -70,7 +119,7 @@ a {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #36383b #0b0c0e;
+  scrollbar-color: #2a2b2e #060708;
 }
 
 *::-webkit-scrollbar {
@@ -79,7 +128,7 @@ a {
 }
 
 *::-webkit-scrollbar-track {
-  background: #0b0c0e;
+  background: #060708;
 }
 
 *::-webkit-scrollbar-thumb {
@@ -89,6 +138,7 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .wallet-card-sheen { animation: none; }
   html {
     scroll-behavior: auto;
   }

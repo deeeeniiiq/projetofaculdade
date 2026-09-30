@@ -92,7 +92,7 @@ export function CryptoMarket({ embedded = false, initialCoin = "solana", initial
   }
 
   const chart = (
-    <section className={"min-w-0 overflow-hidden rounded-[24px] border border-white/[0.055] " + (embedded ? "bg-[#25272b] p-4 sm:p-5" : "bg-[#191c1e] p-5 sm:p-6")} aria-label="Gráfico de mercado">
+    <section className={"min-w-0 overflow-hidden rounded-[24px] border border-white/[0.055] " + (embedded ? "bg-[#131416] p-4 sm:p-5" : "bg-[#141618] p-5 sm:p-6")} aria-label="Gráfico de mercado">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <CoinIcon key={selectedId} id={selectedId} size={embedded ? 34 : 42} />
@@ -160,7 +160,7 @@ export function CryptoMarket({ embedded = false, initialCoin = "solana", initial
       </motion.header>}
 
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Selecionar ativo">
-        {(embedded ? coins.slice(0, 4) : coins).map((coin) => <motion.button whileTap={{ scale: 0.97 }} type="button" key={coin.id} aria-label={"Ver " + coin.name} aria-pressed={selectedId === coin.id} onClick={() => selectCoin(coin.id)} className={"flex min-h-11 shrink-0 items-center gap-2 rounded-[14px] border px-3 text-[11px] font-semibold transition-colors " + (selectedId === coin.id ? "border-[#98d4b1]/20 bg-[#293730]/50 text-[#d2eddd]" : "border-white/[0.04] bg-[#1b1f21] text-[#9aa7ac] hover:bg-[#272d2f]")}>
+        {(embedded ? coins.slice(0, 4) : coins).map((coin) => <motion.button whileTap={{ scale: 0.97 }} type="button" key={coin.id} aria-label={"Ver " + coin.name} aria-pressed={selectedId === coin.id} onClick={() => selectCoin(coin.id)} className={"flex min-h-11 shrink-0 items-center gap-2 rounded-[14px] border px-3 text-[11px] font-semibold transition-colors " + (selectedId === coin.id ? "border-[#9f8ed7]/25 bg-[#262331] text-[#ddd4ff]" : "border-white/[0.04] bg-[#131517] text-[#9aa7ac] hover:bg-[#202225]")}>
           <CoinIcon id={coin.id} size={23} />{coin.symbol}{favorites.includes(coin.id) && <StarRoundedIcon sx={{ fontSize: 11 }} className="text-[#d9e6bd]" />}
         </motion.button>)}
       </div>
@@ -174,7 +174,7 @@ export function CryptoMarket({ embedded = false, initialCoin = "solana", initial
       {!embedded && <section className="mt-5 overflow-hidden rounded-[24px] border border-white/[0.055] bg-[#17191b] px-4 py-5 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-2"><div><p className="text-xs font-semibold text-[#eeeef0]">Pulso do mercado</p><p className="mt-1 text-[11px] text-[#858a8e]">Movimentos das últimas 24 horas</p></div><TrendingUpRoundedIcon sx={{ fontSize: 21 }} className="text-[#78dfaa]" /></div>
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {[...movers.slice(0, 2), movers.at(-1)].filter((coin): coin is NonNullable<typeof coin> => Boolean(coin)).map((coin, index) => <motion.button key={coin.id} type="button" whileTap={{ scale: 0.98 }} onClick={() => selectCoin(coin.id)} className="flex min-w-0 items-center gap-2.5 rounded-[16px] border border-white/[0.045] bg-[#212427] px-3 py-3 text-left transition hover:bg-[#2b2e30]">
+          {[...movers.slice(0, 2), movers.at(-1)].filter((coin): coin is NonNullable<typeof coin> => Boolean(coin)).map((coin, index) => <motion.button key={coin.id} type="button" whileTap={{ scale: 0.98 }} onClick={() => selectCoin(coin.id)} className="flex min-w-0 items-center gap-2.5 rounded-[16px] border border-white/[0.045] bg-[#141618] px-3 py-3 text-left transition hover:bg-[#202225]">
             <CoinIcon id={coin.id} size={34} /><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-[#f0f1f1]">{coin.name}</span><span className="mt-0.5 block text-[10px] text-[#858d90]">{index === 2 ? "Em queda" : "Em alta"}</span></span><span className={"text-xs font-semibold tabular-nums " + (coin.price_change_percentage_24h >= 0 ? "text-[#86dba9]" : "text-[#eb9ba6]")}>{coin.price_change_percentage_24h > 0 ? "+" : ""}{coin.price_change_percentage_24h.toFixed(2)}%</span>
           </motion.button>)}
         </div>
