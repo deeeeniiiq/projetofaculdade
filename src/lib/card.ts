@@ -33,9 +33,13 @@ export function cashBalanceCents(transactions: readonly Transaction[], initialBa
 
 export function recognizedExpensesCents(transactions: readonly Transaction[]) {
   return transactions.reduce((total, transaction) =>
-    transaction.tipo === "despesa" && transaction.metodo !== CARD_BILL_METHOD
+    transaction.tipo === "despesa" && transaction.metodo !== CARD_BILL_METHOD && transaction.metodo !== "Aporte no cofre"
       ? total + toCents(transaction.valor)
       : total, 0);
+}
+
+export function recognizedIncomeCents(transactions: readonly Transaction[]) {
+  return transactions.reduce((sum, item) => item.tipo === "receita" && item.metodo !== "Resgate do cofre" ? sum + toCents(item.valor) : sum, 0);
 }
 
 export function cardStatement(transactions: readonly Transaction[], now = new Date()) {

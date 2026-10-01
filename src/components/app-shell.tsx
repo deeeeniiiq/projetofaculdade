@@ -8,6 +8,7 @@ import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
 import CreditCardOutlinedIcon from "@mui/icons-material/CreditCardOutlined";
+import AccountBalanceOutlinedIcon from "@mui/icons-material/AccountBalanceOutlined";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -18,9 +19,10 @@ const navItems = [
   { href: "/dashboard/crypto", label: "Cripto", icon: CurrencyBitcoinRoundedIcon },
   { href: "/dashboard/memes", label: "Explorar", icon: ExploreOutlinedIcon },
   { href: "/dashboard/cartao", label: "Cartão", icon: CreditCardOutlinedIcon },
+  { href: "/dashboard/banco", label: "Banco", icon: AccountBalanceOutlinedIcon },
   { href: "/dashboard/nova-transacao", label: "Adicionar", icon: AddRoundedIcon },
 ];
-const mobileNavItems = navItems.filter((item) => item.href !== "/dashboard/crypto");
+const mobileNavItems = navItems.filter((item) => !["/dashboard/crypto", "/dashboard/nova-transacao"].includes(item.href));
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();

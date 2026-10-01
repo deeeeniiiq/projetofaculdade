@@ -66,7 +66,7 @@ button:focus-visible, a:focus-visible, select:focus-visible {
 .wallet-card-face {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  border: 1px solid rgba(255, 255, 255, .38);
+  border: 1px solid rgba(255, 255, 255, .25);
 }
 
 .wallet-card-front {
@@ -87,20 +87,22 @@ button:focus-visible, a:focus-visible, select:focus-visible {
 }
 
 .wallet-card-sheen {
-  background: conic-gradient(from 25deg at 55% 45%, transparent 0deg, rgba(255,255,255,.35) 60deg, transparent 130deg, rgba(255,255,255,.28) 220deg, transparent 290deg);
+  background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.30) 42%, transparent 63%);
   mix-blend-mode: soft-light;
-  animation: wallet-holo-drift 13s ease-in-out infinite alternate;
+  opacity: .5;
 }
 
 .wallet-card-orbit {
   width: 80%;
   aspect-ratio: 1;
-  border: 1px solid rgba(255,255,255,.34);
+  background: rgba(233, 219, 250, .28);
   border-radius: 50%;
 }
 
-.wallet-card-orbit-one { top: -56%; right: -18%; }
-.wallet-card-orbit-two { top: -36%; right: -32%; }
+.wallet-card-orbit-one { top: -58%; right: -34%; background: rgba(211, 229, 251, .35); }
+.wallet-card-orbit-two { bottom: -83%; left: -10%; }
+.bank-processing { animation: bank-spin 1.4s linear infinite; }
+@keyframes bank-spin { to { transform: rotate(360deg); } }
 
 @keyframes wallet-holo-drift {
   from { transform: translate3d(-8%, -4%, 0) rotate(-8deg) scale(1.17); opacity: .54; }

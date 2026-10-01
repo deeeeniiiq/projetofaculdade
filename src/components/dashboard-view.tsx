@@ -786,6 +786,14 @@ export function DashboardView({
           </div>
         </motion.header>
 
+        <nav aria-label="Navegação da carteira" className="mt-5 hidden items-center gap-6 border-b border-white/[.065] pb-3 text-xs font-medium text-white/45 lg:flex">
+          <span className="text-white">Carteira</span>
+          <Link href="/dashboard/crypto" className="transition hover:text-white">Mercado</Link>
+          <Link href="/dashboard/memes" className="transition hover:text-white">Explorar</Link>
+          <Link href="/dashboard/cartao" className="flex items-center gap-1.5 transition hover:text-white"><CreditCardOutlinedIcon sx={{ fontSize: 17 }} />Cartão</Link>
+          <Link href="/dashboard/banco" className="transition hover:text-white">Banco</Link>
+        </nav>
+
         <motion.section
           initial={{ opacity: 0, y: 18, scale: 0.985 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}

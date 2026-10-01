@@ -17,6 +17,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 import { VirtualCard } from "@/components/virtual-card";
+import { CardSettings, useCardPreferences } from "@/components/card-settings";
+import { cardRuleError } from "@/lib/card-controls";
 import { simulateBillPayment, simulateCardPurchase } from "@/app/actions/card";
 import {
   CARD_BILL_METHOD,
@@ -58,6 +60,9 @@ export function CardWallet({
   cashBalance: number;
 }) {
   const router = useRouter();
+  const preferences = useCardPreferences();
+  const [channel, setChannel] = useState<"Online" | "Aproximação">("Online");
+  const selectedTemporary = preferences.useTemporary ? preferences.temporary : null;
   const [holder, setHolder] = useState("Daniel");
   const [holderDraft, setHolderDraft] = useState("Daniel");
   const [frozen, setFrozen] = useState(false);
@@ -108,6 +113,7 @@ export function CardWallet({
     setRequestId(crypto.randomUUID());
     setMerchant("");
     setCategory("Compras");
+    setChannel("Online");
     setRawAmount(nextMode === "bill"
       ? (statement.outstandingCents / 100).toFixed(2).replace(".", ",")
       : "");
@@ -136,6 +142,9 @@ export function CardWallet({
     event.preventDefault();
     if (mode === "purchase") {
       if (frozen) { setError("Ative o cartão antes de simular uma compra."); return; }
+      if (preferences.useTemporary && !selectedTemporary) { setError("Gere um cartão temporário antes de usar."); return; }
+      const controlError = cardRuleError(preferences.rules, channel, Math.round(paymentAmount * 100), selectedTemporary);
+      if (controlError) { setError(controlError); return; }
       if (merchant.trim().length < 2) { setError("Informe o estabelecimento."); return; }
       if (paymentAmount <= 0 || paymentAmount > 5000) { setError("Informe até R$ 5.000,00 por compra."); return; }
       if (Math.round(paymentAmount * 100) > statement.availableCents) { setError("Valor acima do limite disponível."); return; }
@@ -149,6 +158,10 @@ export function CardWallet({
 
   function confirmPayment() {
     if (pending || step === "processing" || !mode || mode === "edit") return;
+    if (mode === "purchase") {
+      const controlError = cardRuleError(preferences.rules, channel, Math.round(paymentAmount * 100), selectedTemporary);
+      if (frozen || controlError) { setError(controlError || "Cartão pausado."); return; }
+    }
     setError("");
     setStep("processing");
     setCardProgress(1);
@@ -157,13 +170,14 @@ export function CardWallet({
     startTransition(async () => {
       try {
         const result = mode === "purchase"
-          ? await simulateCardPurchase({ requestId, merchant: merchant.trim(), amount: paymentAmount, category })
+          ? await simulateCardPurchase({ requestId, merchant: merchant.trim(), amount: paymentAmount, category, channel, temporary: selectedTemporary ? { id: selectedTemporary.id, lastFour: selectedTemporary.number.slice(-4), expires: selectedTemporary.expires } : undefined })
           : await simulateBillPayment(requestId, paymentAmount);
         if (!result.ok) { setError(result.error); setStep("review"); return; }
         await visualDelay;
         setCardProgress(3);
         await new Promise<void>((resolve) => window.setTimeout(resolve, 430));
         setResultId(result.transactionId);
+        if (mode === "purchase" && selectedTemporary) { preferences.setTemporary({ ...selectedTemporary, used: true }); preferences.setUseTemporary(false); }
         setStep("success");
         router.refresh();
       } catch {
@@ -187,13 +201,14 @@ export function CardWallet({
 
       <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,.9fr)] lg:gap-14">
         <div>
-          <VirtualCard holder={holder} frozen={frozen} flipped={flipped} onFlip={() => setFlipped((value) => !value)} />
+          <VirtualCard holder={holder} frozen={frozen} flipped={flipped} number={selectedTemporary?.number} temporary={!!selectedTemporary} onFlip={() => setFlipped((value) => !value)} />
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="mt-4 text-center text-[10px] text-white/34">Toque para virar · Número e operações fictícios</motion.p>
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.5, ease }} className="mt-7 grid grid-cols-3 gap-2.5">
-            <button type="button" onClick={() => openMode("purchase")} disabled={frozen || statement.availableCents === 0} className="group flex min-h-[78px] flex-col items-center justify-center gap-2 rounded-[18px] bg-[#17181b] px-2 text-[11px] font-semibold text-white/82 transition hover:-translate-y-0.5 hover:bg-[#202126] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"><ShoppingBagOutlinedIcon sx={{ fontSize: 23 }} className="text-[#c8baff]" />Pagar</button>
-            <button type="button" onClick={() => openMode("bill")} disabled={statement.outstandingCents === 0} className="group flex min-h-[78px] flex-col items-center justify-center gap-2 rounded-[18px] bg-[#17181b] px-2 text-[11px] font-semibold text-white/82 transition hover:-translate-y-0.5 hover:bg-[#202126] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"><ReceiptLongRoundedIcon sx={{ fontSize: 23 }} className="text-[#c8baff]" />Pagar fatura</button>
-            <button type="button" onClick={() => openMode("edit")} className="group flex min-h-[78px] flex-col items-center justify-center gap-2 rounded-[18px] bg-[#17181b] px-2 text-[11px] font-semibold text-white/82 transition hover:-translate-y-0.5 hover:bg-[#202126] active:scale-[0.98]"><EditRoundedIcon sx={{ fontSize: 22 }} className="text-[#c8baff]" />Titular</button>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.5, ease }} className="mt-7 grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => openMode("purchase")} disabled={frozen || statement.availableCents === 0} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#c6b8fb] text-xs font-semibold text-[#201a32] transition hover:bg-[#d5c9ff] active:scale-[.98] disabled:opacity-35"><ShoppingBagOutlinedIcon sx={{ fontSize: 19 }} />Pagar</button>
+            <button type="button" onClick={() => openMode("bill")} disabled={statement.outstandingCents === 0} className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#151618] text-xs font-semibold text-white/80 transition hover:bg-[#202126] active:scale-[.98] disabled:opacity-35"><ReceiptLongRoundedIcon sx={{ fontSize: 19 }} />Pagar fatura</button>
           </motion.div>
+          <CardSettings preferences={preferences} />
+          <button onClick={() => openMode("edit")} className="mt-2 flex min-h-12 w-full items-center gap-3 border-b border-white/[.06] px-1 text-left text-xs text-white/65"><EditRoundedIcon sx={{ fontSize: 18 }} />Nome no cartão<span className="ml-auto text-white/35">{holder}</span></button>
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36, duration: 0.5, ease }} className="mt-5">
             <button type="button" onClick={toggleFrozen} aria-pressed={frozen} className="flex min-h-11 w-full items-center gap-2.5 border-b border-white/[0.065] px-1 text-left transition hover:text-white">{frozen ? <LockOutlinedIcon sx={{ fontSize: 18 }} className="text-[#ff9aa8]" /> : <LockOpenRoundedIcon sx={{ fontSize: 18 }} className="text-[#b9aaf5]" />}<span className="min-w-0 flex-1 text-[11px] font-medium text-white/65">{frozen ? "Cartão pausado neste aparelho" : "Cartão ativo neste aparelho"}</span><span className={"relative h-5 w-9 shrink-0 rounded-full transition " + (frozen ? "bg-white/15" : "bg-[#a594e9]")}><span className={"absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform " + (frozen ? "translate-x-0.5" : "translate-x-[18px]")} /></span></button>
           </motion.div>
@@ -223,7 +238,7 @@ export function CardWallet({
       <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36, duration: 0.55, ease }} className="mt-12" aria-label="Movimentações do cartão">
         <div className="mb-4 flex items-end justify-between gap-3 border-t border-white/[0.08] pt-7"><div><p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-white/40">EXTRATO</p><h2 className="mt-1 text-lg font-semibold tracking-[-0.04em]">Movimentações</h2></div><span className="text-[10px] text-white/35">{cardEntries.length ? `${cardEntries.length} registros` : "Cartão virtual"}</span></div>
         <div className="space-y-2">
-          {cardEntries.length === 0 ? <div className="flex min-h-[90px] items-center gap-3 rounded-[18px] bg-[#131416] px-4"><CreditCardOutlinedIcon sx={{ fontSize: 23 }} className="text-[#b9aaf5]" /><div><p className="text-[12px] font-semibold text-white/75">Nenhuma movimentação ainda</p><p className="mt-1 text-[10px] leading-4 text-white/40">Compras simuladas aparecem aqui com comprovante para baixar.</p></div></div> : cardEntries.slice(0, showAllActivity ? undefined : 6).map((entry) => <Link key={entry.id} href={"/dashboard/comprovante/" + entry.id} className="flex min-h-[72px] items-center gap-3 rounded-[17px] border border-white/[0.035] bg-[#141517] px-4 py-3 transition hover:bg-[#1c1d20]"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.055] text-[#c2b7ed]">{entry.metodo === CARD_BILL_METHOD ? <ReceiptLongRoundedIcon sx={{ fontSize: 18 }} /> : <ShoppingBagOutlinedIcon sx={{ fontSize: 18 }} />}</span><span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-semibold text-white/85">{entry.destinatario || entry.descricao}</span><span className="mt-1 block text-[10px] text-white/37">{entry.metodo === CARD_BILL_METHOD ? "Fatura paga" : entry.categoria || "Compra"} · {shortDate.format(new Date(entry.criado_em))}</span></span><span className="shrink-0 text-right"><span className="block text-[12px] font-semibold text-white/80">{money.format(entry.valor)}</span><span className="mt-1 block text-[9px] text-white/35">PDF ↗</span></span></Link>)}
+          {cardEntries.length === 0 ? <div className="flex min-h-[90px] items-center gap-3 rounded-[18px] bg-[#131416] px-4"><CreditCardOutlinedIcon sx={{ fontSize: 23 }} className="text-[#b9aaf5]" /><div><p className="text-[12px] font-semibold text-white/75">Nenhuma movimentação ainda</p><p className="mt-1 text-[10px] leading-4 text-white/40">Compras simuladas aparecem aqui com comprovante para baixar.</p></div></div> : cardEntries.slice(0, showAllActivity ? undefined : 6).map((entry) => <Link key={entry.id} href={"/dashboard/comprovante/" + entry.id} className="flex min-h-[72px] items-center gap-3 rounded-[17px] border border-white/[0.035] bg-[#121315] px-4 py-3 transition hover:bg-[#1c1d20]"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.055] text-[#c2b7ed]">{entry.metodo === CARD_BILL_METHOD ? <ReceiptLongRoundedIcon sx={{ fontSize: 18 }} /> : <ShoppingBagOutlinedIcon sx={{ fontSize: 18 }} />}</span><span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-semibold text-white/85">{entry.destinatario || entry.descricao}</span><span className="mt-1 block text-[10px] text-white/37">{entry.metodo === CARD_BILL_METHOD ? "Fatura paga" : entry.categoria || "Compra"} · {shortDate.format(new Date(entry.criado_em))}</span></span><span className="shrink-0 text-right"><span className="block text-[12px] font-semibold text-white/80">{money.format(entry.valor)}</span><span className="mt-1 block text-[9px] text-white/35">PDF ↗</span></span></Link>)}
           {cardEntries.length > 6 && <button type="button" onClick={() => setShowAllActivity((value) => !value)} className="min-h-10 w-full text-[11px] font-semibold text-[#bfb5ed] transition hover:text-white">{showAllActivity ? "Mostrar menos" : `Ver todas as ${cardEntries.length} movimentações`}</button>}
         </div>
       </motion.section>
@@ -236,14 +251,15 @@ export function CardWallet({
             {mode === "edit" ? <motion.form key="edit" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.24, ease }} onSubmit={saveHolder} className="mt-5"><label className="block text-[11px] font-medium text-white/55">Nome exibido<input autoFocus value={holderDraft} onChange={(event) => setHolderDraft(event.target.value)} maxLength={30} className="mt-2 h-12 w-full rounded-xl border border-white/[0.08] bg-[#111315] px-3.5 text-sm text-white outline-none focus:border-[#b9aaf5]/50" /></label><p className="mt-3 text-[10px] leading-4 text-white/40">Esta preferência fica apenas neste navegador. Não cadastre dados de um cartão real.</p>{error && <p role="alert" className="mt-3 text-xs text-[#ff8a99]">{error}</p>}<button type="submit" className="mt-5 h-12 w-full rounded-xl bg-[#c5b8fb] text-xs font-semibold text-[#211b30] transition hover:bg-[#dbd2ff]">Salvar nome</button></motion.form>
               : step === "compose" ? <motion.form key="compose" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.24, ease }} onSubmit={reviewPayment} className="mt-5 space-y-4">
                 {mode === "purchase" && <><label className="block text-[11px] font-medium text-white/55">Estabelecimento<input autoFocus required value={merchant} onChange={(event) => setMerchant(event.target.value)} maxLength={70} placeholder="Onde foi a compra?" className="mt-2 h-12 w-full rounded-xl border border-white/[0.08] bg-[#111315] px-3.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#b9aaf5]/50" /></label><label className="block text-[11px] font-medium text-white/55">Categoria<select value={category} onChange={(event) => setCategory(event.target.value as CardCategory)} className="mt-2 h-12 w-full rounded-xl border border-white/[0.08] bg-[#111315] px-3.5 text-sm text-white outline-none focus:border-[#b9aaf5]/50">{CARD_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}</select></label></>}
+                {mode === "purchase" && <label className="block text-[11px] font-medium text-white/55">Como pagar<select value={channel} onChange={(event) => setChannel(event.target.value as "Online" | "Aproximação")} className="mt-2 h-12 w-full rounded-xl bg-[#111315] px-3.5 text-sm text-white"><option>Online</option><option>Aproximação</option></select></label>}
                 <label className="block text-[11px] font-medium text-white/55">Valor em reais<input required inputMode="decimal" value={rawAmount} onChange={(event) => setRawAmount(event.target.value)} placeholder="0,00" className="mt-2 h-12 w-full rounded-xl border border-white/[0.08] bg-[#111315] px-3.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#b9aaf5]/50" /></label>
-                <p className="text-[10px] text-white/40">{mode === "bill" ? "Fatura em aberto: " + amountInReais(statement.outstandingCents) : "Limite disponível: " + amountInReais(statement.availableCents)}</p>
+                <p className="text-[10px] text-white/40">{mode === "bill" ? "Fatura em aberto: " + amountInReais(statement.outstandingCents) : (selectedTemporary ? "Temporário · " : "Principal · ") + "Até " + amountInReais(preferences.rules.capCents) + " por compra"}</p>
                 {error && <p role="alert" className="text-xs text-[#ff8a99]">{error}</p>}
                 <button type="submit" className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#c5b8fb] text-xs font-semibold text-[#211b30] transition hover:bg-[#dbd2ff]">Revisar simulação <ArrowForwardRoundedIcon sx={{ fontSize: 18 }} /></button>
               </motion.form>
               : step === "review" ? <motion.div key="review" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.24, ease }} className="mt-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">REVISÃO</p><p className="mt-2 text-[32px] font-semibold tracking-[-0.06em]">{money.format(paymentAmount)}</p><p className="mt-1 text-[12px] text-white/55">{mode === "purchase" ? merchant.trim() : "Pagamento da fatura"}</p>
-                <div className="mt-5 space-y-3 rounded-[15px] border border-white/[0.06] bg-[#121416] p-4 text-[11px]"><div className="flex justify-between gap-3"><span className="text-white/40">Cartão</span><span>•••• {CARD_LAST_FOUR}</span></div><div className="flex justify-between gap-3"><span className="text-white/40">{mode === "purchase" ? "Limite após a compra" : "Fatura após o pagamento"}</span><span>{mode === "purchase" ? amountInReais(statement.availableCents - Math.round(paymentAmount * 100)) : amountInReais(statement.outstandingCents - Math.round(paymentAmount * 100))}</span></div>{mode === "bill" && <div className="flex justify-between gap-3"><span className="text-white/40">Saldo após pagar</span><span>{money.format(cashBalance - paymentAmount)}</span></div>}</div>
+                <div className="mt-5 space-y-3 rounded-[15px] border border-white/[0.06] bg-[#121416] p-4 text-[11px]"><div className="flex justify-between gap-3"><span className="text-white/40">Cartão</span><span>•••• {mode === "purchase" && selectedTemporary ? selectedTemporary.number.slice(-4) : CARD_LAST_FOUR}</span></div><div className="flex justify-between gap-3"><span className="text-white/40">{mode === "purchase" ? "Limite após a compra" : "Fatura após o pagamento"}</span><span>{mode === "purchase" ? amountInReais(statement.availableCents - Math.round(paymentAmount * 100)) : amountInReais(statement.outstandingCents - Math.round(paymentAmount * 100))}</span></div>{mode === "bill" && <div className="flex justify-between gap-3"><span className="text-white/40">Saldo após pagar</span><span>{money.format(cashBalance - paymentAmount)}</span></div>}</div>
                 <p className="mt-4 text-[10px] leading-5 text-white/40">Operação demonstrativa. Nenhum cartão é cobrado e nenhum valor real é transferido.</p>
                 {error && <p role="alert" className="mt-3 text-xs text-[#ff8a99]">{error}</p>}
                 <div className="mt-5 grid grid-cols-[1fr_1.5fr] gap-2"><button type="button" onClick={() => { setError(""); setStep("compose"); }} disabled={pending} className="h-12 rounded-xl border border-white/[0.08] text-xs font-semibold text-white/70 transition hover:bg-white/[0.05]">Voltar</button><button type="button" onClick={confirmPayment} disabled={pending} className="h-12 rounded-xl bg-[#c5b8fb] text-xs font-semibold text-[#211b30] transition hover:bg-[#dbd2ff] disabled:opacity-50">{pending ? "Registrando…" : "Confirmar simulação"}</button></div>

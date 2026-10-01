@@ -23,6 +23,8 @@ export type CardPurchaseInput = {
   merchant: string;
   amount: number;
   category: CardCategory;
+  channel?: "Online" | "Aproximação";
+  temporary?: { id: string; lastFour: string; expires: number };
 };
 
 const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -50,25 +52,30 @@ export async function simulateCardPurchase(input: CardPurchaseInput): Promise<Ca
     return { ok: false, error: "Informe até R$ 5.000,00 por compra demonstrativa." };
 
   const amountCents = toCents(input.amount);
+  if (input.channel != null && !["Online", "Aproximação"].includes(input.channel)) return { ok: false, error: "Canal de compra inválido." };
+  if (input.temporary && (!uuidV4.test(input.temporary.id) || !/^\d{4}$/.test(input.temporary.lastFour) || !Number.isFinite(input.temporary.expires) || input.channel !== "Online")) return { ok: false, error: "Cartão temporário inválido." };
+  const identity = input.temporary ? `Temporário •••• ${input.temporary.lastFour} · ${input.temporary.id}` : CARD_MASK;
   try {
     const existing = await getTransactionById(input.requestId);
     if (existing) {
-      if (existing.metodo !== CARD_PURCHASE_METHOD || existing.destinatario !== merchant || toCents(existing.valor) !== amountCents)
+      if (existing.metodo !== CARD_PURCHASE_METHOD || existing.destinatario !== merchant || toCents(existing.valor) !== amountCents || existing.identificador !== identity)
         return { ok: false, error: "Este identificador já foi utilizado. Inicie outra compra." };
       return finished(existing.id, existing.valor);
     }
 
-    const statement = cardStatement(await getTransactions());
+    const transactions = await getTransactions();
+    if (input.temporary && (input.temporary.expires <= Date.now() || input.temporary.expires > Date.now() + 10 * 60 * 1000 || transactions.some((item) => item.identificador === identity))) return { ok: false, error: "Cartão temporário expirado ou já utilizado." };
+    const statement = cardStatement(transactions);
     if (amountCents > statement.availableCents)
       return { ok: false, error: "A compra excede o limite disponível do cartão." };
 
     const transaction = await addTransaction({
       descricao: merchant,
       destinatario: merchant,
-      identificador: CARD_MASK,
+      identificador: identity,
       metodo: CARD_PURCHASE_METHOD,
       categoria: input.category,
-      mensagem: "Compra no crédito demonstrativo. Nenhuma cobrança real foi efetuada.",
+      mensagem: `Compra ${input.channel || "Online"}${input.temporary ? " com cartão temporário de uso único" : ""}. Nenhuma cobrança real foi efetuada.`,
       tipo: "despesa",
       valor: amountCents / 100,
       status: "Simulação registrada",
@@ -76,6 +83,7 @@ export async function simulateCardPurchase(input: CardPurchaseInput): Promise<Ca
     }, input.requestId);
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/cartao");
+    revalidatePath("/dashboard/banco");
     return finished(transaction.id, transaction.valor);
   } catch {
     return { ok: false, error: "Não foi possível registrar a compra. Tente novamente." };
