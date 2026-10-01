@@ -9,7 +9,7 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import ViewListRoundedIcon from "@mui/icons-material/ViewListRounded";
-import { cashMovementCents } from "@/lib/card";
+import { CARD_PURCHASE_METHOD, cashMovementCents } from "@/lib/card";
 import { activityMethod, filterActivities, type ActivityMethod, type ActivityType } from "@/lib/activity-filters";
 import { getTransactionDetails } from "@/lib/transaction-details";
 import { parseBRL } from "@/lib/transfer";
@@ -19,16 +19,21 @@ const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
 const dayFormat = new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Sao_Paulo" });
 const timeFormat = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 const dayKey = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "America/Sao_Paulo" });
+function activityDayLabel(isoDate: string) {
+  const label = dayFormat.format(new Date(isoDate));
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
 
 function ActivityRow({ transaction, timeline }: { transaction: Transaction; timeline: boolean }) {
   const details = getTransactionDetails(transaction);
   const impact = cashMovementCents(transaction) / 100;
+  const cardPurchase = transaction.metodo === CARD_PURCHASE_METHOD;
   return <div className={timeline ? "relative pl-6" : ""}>
     {timeline && <><span className="absolute left-[3px] top-7 h-2.5 w-2.5 rounded-full border-2 border-[#121416] bg-[#ae9ff0]" /><span className="absolute bottom-0 left-[7px] top-10 w-px bg-white/[0.085]" /></>}
     <Link href={"/dashboard/comprovante/" + transaction.id} className="group flex min-w-0 items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#151619] px-3.5 py-3.5 transition-colors hover:border-white/[0.1] hover:bg-[#1b1c20] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b9aaf5]">
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#25272a] text-[11px] font-semibold text-[#e9e7ef]">{details.initials}</span>
       <span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-semibold text-[#eff0ef]">{details.counterparty}</span><span className="mt-1 block truncate text-[10px] text-white/42">{activityMethod(transaction)} · {details.category} · {timeFormat.format(new Date(transaction.criado_em))}</span></span>
-      <span className="shrink-0 text-right"><span className={"block text-[12px] font-semibold tabular-nums " + (impact > 0 ? "text-[#78df9f]" : "text-[#f0f0ef]")}>{impact > 0 ? "+" : ""}{money.format(impact)}</span><span className="mt-1 inline-flex items-center gap-1 text-[9px] text-white/35">Comprovante <ReceiptLongOutlinedIcon sx={{ fontSize: 12 }} /></span></span>
+      <span className="shrink-0 text-right"><span className={"block text-[12px] font-semibold tabular-nums " + (impact > 0 ? "text-[#78df9f]" : "text-[#f0f0ef]")}>{cardPurchase ? money.format(transaction.valor) : (impact > 0 ? "+" : "") + money.format(impact)}</span><span className="mt-1 inline-flex items-center gap-1 text-[9px] text-white/35">{cardPurchase ? "No crédito · recibo" : "Comprovante"} <ReceiptLongOutlinedIcon sx={{ fontSize: 12 }} /></span></span>
     </Link>
   </div>;
 }
@@ -85,7 +90,7 @@ export function ActivityExplorer({ transactions }: { transactions: Transaction[]
       </details>
       <div className="flex items-center justify-between gap-2 border-t border-white/[0.055] pt-3"><p aria-live="polite" className="text-[11px] text-white/45">{filtered.length} {filtered.length === 1 ? "registro" : "registros"} · fluxo <motion.span key={net} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={net >= 0 ? "text-[#8be8b2]" : "text-[#ff9da8]"}>{money.format(net)}</motion.span></p><button type="button" disabled={!filtered.length || invalidRange} onClick={exportCsv} className="flex items-center gap-1 text-[11px] text-white/65 disabled:opacity-30"><FileDownloadRoundedIcon sx={{ fontSize: 16 }} />CSV</button></div>
     </div>
-    <AnimatePresence mode="wait" initial={false}><motion.div key={view} initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.22 }} className="space-y-4">{visible.length ? groups.map(([key, items]) => <div key={key}><p className="mb-2 px-1 text-[10px] font-semibold capitalize tracking-[0.03em] text-white/38">{key === "sem-data" ? "Sem data" : dayFormat.format(new Date(items[0].criado_em))}</p><div className="space-y-2">{items.map(transaction => <ActivityRow key={transaction.id} transaction={transaction} timeline={view === "timeline"} />)}</div></div>) : <p className="py-10 text-center text-sm text-white/40">{invalidRange ? "Ajuste os valores para ver o histórico." : "Nenhum registro encontrado para este filtro."}</p>}</motion.div></AnimatePresence>
+    <AnimatePresence mode="wait" initial={false}><motion.div key={view} initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.22 }} className="space-y-4">{visible.length ? groups.map(([key, items]) => <div key={key}><p className="mb-2 px-1 text-[10px] font-semibold tracking-[0.03em] text-white/38">{key === "sem-data" ? "Sem data" : activityDayLabel(items[0].criado_em)}</p><div className="space-y-2">{items.map(transaction => <ActivityRow key={transaction.id} transaction={transaction} timeline={view === "timeline"} />)}</div></div>) : <p className="py-10 text-center text-sm text-white/40">{invalidRange ? "Ajuste os valores para ver o histórico." : "Nenhum registro encontrado para este filtro."}</p>}</motion.div></AnimatePresence>
     {filtered.length > limit && <button type="button" onClick={() => setLimit(limit + 20)} className="w-full rounded-xl bg-[#1a1b1e] py-3 text-xs text-white/65">Carregar mais registros</button>}
   </div>;
 }
