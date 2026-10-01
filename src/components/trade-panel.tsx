@@ -54,7 +54,7 @@ export function TradePanel({ markets, updatedAt, initialCoin = "solana", initial
   }
 
   return (
-    <section className="overflow-hidden rounded-[24px] border border-white/[0.065] bg-[#1d2022] p-5 sm:p-6" aria-label="Compra e troca de moedas">
+    <section className="overflow-hidden rounded-[24px] border border-white/[0.055] bg-[#151619] p-5 sm:p-6" aria-label="Compra e troca de moedas">
       <div className="mb-5 flex items-center justify-between">
         <h2 className="text-sm font-semibold tracking-[-0.02em]">{step === "review" ? "Revise a simulação" : step === "done" ? "Tudo pronto" : "Movimente sua carteira"}</h2>
         <span className="rounded-md bg-white/[0.05] px-2 py-1 text-[9px] font-medium text-[#9da3a6]">Simulação</span>

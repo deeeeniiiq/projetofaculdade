@@ -4,10 +4,10 @@ import { motion, MotionConfig } from "framer-motion";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import CurrencyBitcoinRoundedIcon from "@mui/icons-material/CurrencyBitcoinRounded";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
+import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import AccountBalanceWalletRoundedIcon from "@mui/icons-material/AccountBalanceWalletRounded";
-import CreditCardRoundedIcon from "@mui/icons-material/CreditCardRounded";
+import CreditCardOutlinedIcon from "@mui/icons-material/CreditCardOutlined";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -16,8 +16,8 @@ import { WalletLock } from "@/components/wallet-lock";
 const navItems = [
   { href: "/dashboard", label: "Início", icon: HomeRoundedIcon, exact: true },
   { href: "/dashboard/crypto", label: "Cripto", icon: CurrencyBitcoinRoundedIcon },
-  { href: "/dashboard/memes", label: "Explorar", icon: LocalFireDepartmentRoundedIcon },
-  { href: "/dashboard/cartao", label: "Cartão", icon: CreditCardRoundedIcon },
+  { href: "/dashboard/memes", label: "Explorar", icon: ExploreOutlinedIcon },
+  { href: "/dashboard/cartao", label: "Cartão", icon: CreditCardOutlinedIcon },
   { href: "/dashboard/nova-transacao", label: "Adicionar", icon: AddRoundedIcon },
 ];
 const mobileNavItems = navItems.filter((item) => item.href !== "/dashboard/crypto");

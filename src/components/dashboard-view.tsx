@@ -4,8 +4,12 @@
 
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import Dialog from "@mui/material/Dialog";
-import AddRoundedIcon from "@mui/icons-material/AddRounded";
-import AttachMoneyRoundedIcon from "@mui/icons-material/AttachMoneyRounded";
+import AddAPhotoOutlinedIcon from "@mui/icons-material/AddAPhotoOutlined";
+import ContactsOutlinedIcon from "@mui/icons-material/ContactsOutlined";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
+import StarBorderRoundedIcon from "@mui/icons-material/StarBorderRounded";
+import PaidOutlinedIcon from "@mui/icons-material/PaidOutlined";
+import QrCode2RoundedIcon from "@mui/icons-material/QrCode2Rounded";
 import ArrowBackRoundedIcon from "@mui/icons-material/ArrowBackRounded";
 import ArrowOutwardRoundedIcon from "@mui/icons-material/ArrowOutwardRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
@@ -13,10 +17,11 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import CollectionsRoundedIcon from "@mui/icons-material/CollectionsRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import CardGiftcardRoundedIcon from "@mui/icons-material/CardGiftcardRounded";
-import CreditCardRoundedIcon from "@mui/icons-material/CreditCardRounded";
+import CreditCardOutlinedIcon from "@mui/icons-material/CreditCardOutlined";
+import CandlestickChartRoundedIcon from "@mui/icons-material/CandlestickChartRounded";
+import ExploreOutlinedIcon from "@mui/icons-material/ExploreOutlined";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
 import HistoryRoundedIcon from "@mui/icons-material/HistoryRounded";
-import LocalFireDepartmentRoundedIcon from "@mui/icons-material/LocalFireDepartmentRounded";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import LockRoundedIcon from "@mui/icons-material/LockRounded";
@@ -33,17 +38,15 @@ import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import ShareRoundedIcon from "@mui/icons-material/ShareRounded";
 import ShieldRoundedIcon from "@mui/icons-material/ShieldRounded";
-import SwapVertRoundedIcon from "@mui/icons-material/SwapVertRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import QRCode from "qrcode";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useId, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useId, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { destinationError, destinationKey, parseBRL, splitBRL } from "@/lib/transfer";
 import { estimatePortfolioDayChange } from "@/lib/market";
-import { cardStatement } from "@/lib/card";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import CallSplitRoundedIcon from "@mui/icons-material/CallSplitRounded";
 import { ActivityExplorer } from "@/components/activity-explorer";
@@ -64,6 +67,12 @@ const currency = new Intl.NumberFormat("pt-BR", {
 const number = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 5,
 });
+const profileStorageKey = "saldo-profile-photos-v1";
+const defaultProfilePhoto = "/profile-architecture.jpg";
+
+function AccountPortrait({ photo, initial, className }: { photo: string | null; initial: string; className: string }) {
+  return <span className={"grid shrink-0 place-items-center overflow-hidden rounded-full border border-white/[0.12] bg-[#24252a] font-semibold text-[#c5b8fa] " + className}>{photo ? <img src={photo} alt="" className="h-full w-full object-cover" /> : initial}</span>;
+}
 
 type DashboardViewProps = {
   transactions: Transaction[];
@@ -77,6 +86,7 @@ type ModalKind = "receive" | "send" | "swap" | "buy" | null;
 type DashboardTab = "tokens" | "memes" | "nfts" | "activity" | "insights";
 type SendStep = "compose" | "review" | "processing" | "success";
 type SendMethod = "PIX" | "Carteira";
+type SavedContact = { name: string; destination: string; method: SendMethod; pinned: boolean };
 type SendCategory = "Transferência" | "Alimentação" | "Moradia" | "Presente";
 
 const sendCategories = [
@@ -115,14 +125,15 @@ const accounts = [
 ] as const;
 
 const quickActions = [
+  { id: "receive", label: "Receber", icon: QrCode2RoundedIcon },
   { id: "send", label: "Enviar", icon: SendOutlinedIcon },
-  { id: "receive", label: "Receber", icon: AddRoundedIcon },
-  { id: "buy", label: "Comprar", icon: AttachMoneyRoundedIcon },
+  { id: "swap", label: "Trade", icon: CandlestickChartRoundedIcon },
+  { id: "buy", label: "Comprar", icon: PaidOutlinedIcon },
 ] as const;
 
 const dashboardTabs = [
   { id: "tokens", label: "Tokens", icon: GridViewRoundedIcon },
-  { id: "memes", label: "Explorar", icon: LocalFireDepartmentRoundedIcon },
+  { id: "memes", label: "Explorar", icon: ExploreOutlinedIcon },
   { id: "nfts", label: "NFTs", icon: CollectionsRoundedIcon },
   { id: "activity", label: "Histórico", icon: HistoryRoundedIcon },
 ] as const;
@@ -165,7 +176,7 @@ const demoNfts = [
 const searchItems: { label: string; detail: string; keywords: string; target: "receive" | "send" | "swap" | DashboardTab }[] = [
   { label: "Receber por QR Code", detail: "Abrir endereço da carteira", keywords: "receber qr solana", target: "receive" },
   { label: "Enviar", detail: "Preparar uma transferência", keywords: "enviar transferencia", target: "send" },
-  { label: "Trocar", detail: "Trocar SOL e USDC", keywords: "swap trocar sol usdc", target: "swap" },
+  { label: "Trade", detail: "Comprar ou trocar SOL e USDC", keywords: "trade swap trocar sol usdc", target: "swap" },
   { label: "Tokens", detail: "Ver SOL e USDC", keywords: "tokens ativos solana usdc", target: "tokens" },
   { label: "Explorar Solana", detail: "Tokens em alta ao vivo", keywords: "memes memecoins axiom dexscreener radar explorar", target: "memes" },
   { label: "NFTs", detail: "Abrir colecionáveis", keywords: "nft colecao colecionaveis", target: "nfts" },
@@ -228,6 +239,8 @@ export function DashboardView({
   const [selectedAccountId, setSelectedAccountId] =
     useState<(typeof accounts)[number]["id"]>("personal");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [profilePhotos, setProfilePhotos] = useState<Record<string, string>>({});
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [modal, setModal] = useState<ModalKind>(null);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const { markets, updatedAt, error: marketError } = useMarket("solana", "1d");
@@ -248,6 +261,8 @@ export function DashboardView({
   const sending = useRef(false);
   const requestId = useRef("");
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [savedContacts, setSavedContacts] = useState<SavedContact[]>([]);
+  const [contactsOpen, setContactsOpen] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitTotal, setSplitTotal] = useState("");
   const [splitPeople, setSplitPeople] = useState(2);
@@ -261,9 +276,59 @@ export function DashboardView({
 
   const account =
     accounts.find((item) => item.id === selectedAccountId) ?? accounts[0];
+  const accountPhoto = profilePhotos[account.id] ?? (account.id === "personal" ? defaultProfilePhoto : null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      try {
+        const saved: unknown = JSON.parse(localStorage.getItem(profileStorageKey) ?? "{}");
+        if (saved && typeof saved === "object" && !Array.isArray(saved)) {
+          setProfilePhotos(Object.fromEntries(Object.entries(saved).filter(([key, value]) =>
+            accounts.some((item) => item.id === key) && typeof value === "string" && value.startsWith("data:image/jpeg;base64,") && value.length < 200_000,
+          )));
+        }
+      } catch { /* The sample portrait remains visible when local storage is unavailable. */ }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  async function changeProfilePhoto(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 8_000_000) {
+      setToast("Escolha uma foto JPG, PNG ou WebP de até 8 MB.");
+      return;
+    }
+    const selectedId = account.id;
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("invalid-image")); image.src = objectUrl; });
+      const canvas = document.createElement("canvas");
+      canvas.width = 256; canvas.height = 256;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("canvas-unavailable");
+      const side = Math.min(image.naturalWidth, image.naturalHeight);
+      context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+      const encoded = canvas.toDataURL("image/jpeg", 0.8);
+      const next = { ...profilePhotos, [selectedId]: encoded };
+      setProfilePhotos(next);
+      try { localStorage.setItem(profileStorageKey, JSON.stringify(next)); setToast("Foto atualizada neste navegador."); }
+      catch { setToast("Foto atualizada só nesta sessão; armazenamento indisponível."); }
+    } catch { setToast("Não foi possível abrir esta foto. Tente outro arquivo."); }
+    finally { URL.revokeObjectURL(objectUrl); }
+  }
+
+  function restoreProfilePhoto() {
+    const next = { ...profilePhotos };
+    delete next[account.id];
+    setProfilePhotos(next);
+    try { localStorage.setItem(profileStorageKey, JSON.stringify(next)); } catch { /* Session-only fallback. */ }
+    setToast("Foto padrão restaurada.");
+  }
 
   const accountBalance = balance * account.multiplier;
-  const cardSummary = cardStatement(transactions);
   const sendNumericAmount = parseBRL(sendAmount);
   const postSendBalance = Math.max(accountBalance - sendNumericAmount, 0);
   const sendImpactPercent = Math.min(
@@ -294,6 +359,10 @@ export function DashboardView({
         const value: unknown = JSON.parse(localStorage.getItem("saldo-favorite-destinations") || "[]");
         if (Array.isArray(value)) setFavorites(value.filter((item): item is string => typeof item === "string"));
       } catch { /* A blocked browser store does not prevent sending. */ }
+      try {
+        const value: unknown = JSON.parse(localStorage.getItem("saldo-saved-contacts-v1") || "[]");
+        if (Array.isArray(value)) setSavedContacts(value.filter((item): item is SavedContact => Boolean(item && typeof item === "object" && typeof item.name === "string" && typeof item.destination === "string" && (item.method === "PIX" || item.method === "Carteira"))).slice(0, 30));
+      } catch { /* Contacts remain available for this session. */ }
     });
     return () => cancelAnimationFrame(frame);
   }, []);
@@ -304,6 +373,33 @@ export function DashboardView({
     setFavorites(next);
     try { localStorage.setItem("saldo-favorite-destinations", JSON.stringify(next)); }
     catch { setToast("Favorito mantido apenas nesta sessão."); }
+  }
+
+  function updateSavedContacts(next: SavedContact[]) {
+    setSavedContacts(next);
+    try { localStorage.setItem("saldo-saved-contacts-v1", JSON.stringify(next)); }
+    catch { setToast("Contatos mantidos apenas nesta sessão."); }
+  }
+
+  function saveCurrentContact() {
+    const name = sendRecipient.trim();
+    const destination = sendAddress.trim();
+    if (!name || destinationError(sendMethod, destination)) {
+      setSendError("Preencha um nome e um destino válido antes de salvar o contato.");
+      return;
+    }
+    const key = destinationKey(sendMethod, destination);
+    const next = [{ name, destination, method: sendMethod, pinned: true }, ...savedContacts.filter((contact) => destinationKey(contact.method, contact.destination) !== key)].slice(0, 30);
+    updateSavedContacts(next);
+    setToast("Contato favorito salvo neste navegador.");
+  }
+
+  function toggleContactPin(contact: SavedContact) {
+    updateSavedContacts(savedContacts.map((item) => destinationKey(item.method, item.destination) === destinationKey(contact.method, contact.destination) ? { ...item, pinned: !item.pinned } : item));
+  }
+
+  function removeContact(contact: SavedContact) {
+    updateSavedContacts(savedContacts.filter((item) => destinationKey(item.method, item.destination) !== destinationKey(contact.method, contact.destination)));
   }
 
   const solana = markets.find((coin) => coin.id === "solana");
@@ -325,8 +421,8 @@ export function DashboardView({
   const usdcQuantity =
     usdc?.current_price && usdc.current_price > 0 ? usdcValue / usdc.current_price : 0;
 
-  const positiveBalanceBackground = "radial-gradient(ellipse 62% 66% at 50% 36%, rgba(35,114,69,0.54) 0%, rgba(25,79,51,0.25) 46%, rgba(11,12,14,0) 82%)";
-  const negativeBalanceBackground = "radial-gradient(ellipse 58% 63% at 50% 36%, rgba(88,44,54,0.16) 0%, rgba(11,12,14,0) 78%)";
+  const positiveBalanceBackground = "radial-gradient(ellipse 66% 62% at 50% 40%, rgba(23,113,65,0.67) 0%, rgba(18,71,45,0.34) 43%, rgba(6,7,8,0) 82%)";
+  const negativeBalanceBackground = "radial-gradient(ellipse 66% 62% at 50% 40%, rgba(130,39,53,0.45) 0%, rgba(75,30,42,0.25) 43%, rgba(6,7,8,0) 82%)";
 
   const assets = [
       {
@@ -571,6 +667,7 @@ export function DashboardView({
   return (
     <MotionConfig reducedMotion="user">
     <div className="relative min-h-screen overflow-hidden bg-[#060708] text-white">
+      <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void changeProfilePhoto(event)} className="sr-only" tabIndex={-1} aria-label="Selecionar foto de perfil" />
 
       <main className="relative mx-auto w-full max-w-[760px] px-4 pb-24 pt-5 sm:px-7 sm:pt-7 lg:px-8">
         <motion.header
@@ -585,9 +682,7 @@ export function DashboardView({
               onClick={() => setAccountMenuOpen((open) => !open)}
               className="flex items-center gap-3 rounded-2xl p-1 pr-2 text-left transition hover:bg-white/[0.04]"
             >
-              <span className="grid h-11 w-11 place-items-center rounded-full border border-[#aea1ee]/20 bg-[#393448] text-sm font-bold text-[#c5b8fa]">
-                {account.avatar}
-              </span>
+              <AccountPortrait photo={accountPhoto} initial={account.avatar} className="h-11 w-11 text-sm" />
               <span>
                 <span className="block text-[10px] font-medium text-white/45">{account.handle}</span>
                 <span className="mt-0.5 flex items-center gap-1 text-sm font-semibold tracking-[-0.02em] text-[#f4f4f5]">
@@ -628,9 +723,7 @@ export function DashboardView({
                         }}
                         className={"flex w-full items-center gap-3 rounded-[16px] px-3 py-2.5 text-left transition " + rowClass}
                       >
-                        <span className="grid h-9 w-9 place-items-center rounded-full bg-[#2d2f31] text-xs font-black text-[#e0e1e3]">
-                          {item.avatar}
-                        </span>
+                        <AccountPortrait photo={profilePhotos[item.id] ?? (item.id === "personal" ? defaultProfilePhoto : null)} initial={item.avatar} className="h-9 w-9 text-xs" />
                         <span className="min-w-0 flex-1">
                           <span className="block text-xs font-semibold text-white">{item.label}</span>
                           <span className="mt-0.5 block text-[10px] text-white/40">{item.handle}</span>
@@ -647,6 +740,7 @@ export function DashboardView({
 
                   <div className="my-2 h-px bg-white/[0.06]" />
 
+                  <button type="button" onClick={() => { setAccountMenuOpen(false); photoInputRef.current?.click(); }} className="flex w-full items-center gap-3 rounded-[16px] px-3 py-2.5 text-left text-xs font-semibold text-[#aaaab0] transition hover:bg-white/[0.045] hover:text-white"><span className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.045]"><AddAPhotoOutlinedIcon sx={{ fontSize: 17 }} /></span>Alterar foto</button>
                   <button type="button" onClick={() => { setAccountMenuOpen(false); selectTab("insights"); }} className="flex w-full items-center gap-3 rounded-[16px] px-3 py-2.5 text-left text-xs font-semibold text-[#aaaab0] transition hover:bg-white/[0.045] hover:text-white"><span className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.045]"><PersonRoundedIcon sx={{ fontSize: 17 }} /></span>Detalhes da conta</button>
 
                   <button
@@ -698,8 +792,8 @@ export function DashboardView({
           transition={{ delay: 0.08, duration: 0.7, ease }}
           className="relative isolate mt-7 px-1 pb-8 pt-10 text-center sm:mt-9 sm:pb-9 sm:pt-12"
         >
-          <motion.div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[-188px] h-[490px] w-[160vw] max-w-[1300px] -translate-x-1/2 sm:top-[-215px] sm:h-[540px]" style={{ backgroundImage: positiveBalanceBackground }} initial={false} animate={{ opacity: positive ? 1 : 0 }} transition={{ duration: 0.8, ease }} />
-          <motion.div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[-188px] h-[490px] w-[160vw] max-w-[1300px] -translate-x-1/2 sm:top-[-215px] sm:h-[540px]" style={{ backgroundImage: negativeBalanceBackground }} initial={false} animate={{ opacity: negative ? 1 : 0 }} transition={{ duration: 0.8, ease }} />
+          <motion.div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[-110px] h-[430px] w-[160vw] max-w-[1300px] -translate-x-1/2 sm:top-[-145px] sm:h-[490px]" style={{ backgroundImage: positiveBalanceBackground }} initial={false} animate={{ opacity: positive ? 1 : 0 }} transition={{ duration: 0.9, ease }} />
+          <motion.div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[-110px] h-[430px] w-[160vw] max-w-[1300px] -translate-x-1/2 sm:top-[-145px] sm:h-[490px]" style={{ backgroundImage: negativeBalanceBackground }} initial={false} animate={{ opacity: negative ? 1 : 0 }} transition={{ duration: 0.9, ease }} />
           <div className="relative z-10">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/46">
             Saldo total
@@ -758,7 +852,7 @@ export function DashboardView({
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.16, duration: 0.56, ease }}
-          className="mt-3 grid grid-cols-3 gap-2.5 sm:gap-3"
+          className="mt-3 grid grid-cols-4 gap-2 sm:gap-3"
         >
           {quickActions.map((action, index) => {
             const Icon = action.icon;
@@ -772,7 +866,7 @@ export function DashboardView({
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => openAction(action.id)}
-                className="group flex min-h-[96px] min-w-0 flex-col items-center justify-center gap-2 rounded-[20px] border border-white/[0.045] bg-[#18191b] px-1.5 transition-colors hover:border-white/[0.1] hover:bg-[#222326] sm:min-h-[106px]"
+                className="group flex min-h-[90px] min-w-0 flex-col items-center justify-center gap-2 rounded-[18px] border border-white/[0.04] bg-[#17181b] px-1 transition-colors hover:border-white/[0.1] hover:bg-[#202125] sm:min-h-[102px]"
               >
                 <Icon
                   sx={{ fontSize: { xs: 24, sm: 27 } }}
@@ -786,26 +880,6 @@ export function DashboardView({
           })}
         </motion.section>
 
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <button type="button" onClick={() => setModal("swap")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/[0.055] bg-[#1d1f22] px-3 text-[10px] font-semibold text-[#bfc0c6] transition hover:bg-[#292b30]"><SwapVertRoundedIcon sx={{ fontSize: 17 }} />Trocar</button>
-          <Link href="/dashboard/memes" className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/[0.055] bg-[#1d1f22] px-3 text-[10px] font-semibold text-[#bfc0c6] transition hover:bg-[#292b30]"><LocalFireDepartmentRoundedIcon sx={{ fontSize: 15 }} />Explorar</Link>
-        </div>
-
-        <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32, duration: 0.54, ease }} className="mt-6" aria-label="Acesso ao cartão">
-          <Link href="/dashboard/cartao" className="group flex min-h-[82px] items-center gap-3.5 rounded-[18px] border border-white/[0.05] bg-[#151618] px-3.5 py-3 transition-colors hover:bg-[#1e1f22]">
-            <span className="grid h-12 w-[68px] shrink-0 place-items-center rounded-[12px] bg-[linear-gradient(120deg,#e4d2f7,#e8eed8_55%,#d5e9f6)] text-[#5d5377]"><CreditCardRoundedIcon sx={{ fontSize: 25 }} /></span>
-            <span className="min-w-0 flex-1"><span className="block text-[12px] font-semibold text-[#ededef]">Cartão de crédito</span><span className="mt-1 block text-[10px] text-white/45">Fatura {currency.format(cardSummary.outstandingCents / 100)} ·•••• 2048</span></span>
-            <ArrowOutwardRoundedIcon sx={{ fontSize: 18 }} className="shrink-0 text-white/45 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-          </Link>
-        </motion.section>
-
-        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.48, ease }} className="mt-2.5" aria-label="Acesso ao histórico">
-          <button type="button" onClick={() => selectTab("activity")} className="flex w-full items-center gap-3 rounded-[18px] border border-white/[0.045] bg-[#151618] px-4 py-3 text-left transition-colors hover:bg-[#1e1f22]">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/[0.065] text-[#c4c6ca]"><HistoryRoundedIcon sx={{ fontSize: 19 }} /></span>
-            <span className="min-w-0 flex-1"><span className="block text-[12px] font-semibold text-[#e6e7e9]">Transações</span><span className="mt-0.5 block text-[10px] text-[#9b9ea4]">{transactions.length} registros no histórico</span></span>
-            <ArrowOutwardRoundedIcon sx={{ fontSize: 18 }} className="text-[#a4a6ac]" />
-          </button>
-        </motion.section>
 
         <motion.nav
           id="wallet-content"
@@ -865,6 +939,7 @@ export function DashboardView({
               {assets.map((asset, index) => {
                 const changePositive = asset.change >= 0;
                 const changeClass = changePositive ? "text-[#45e28b]" : "text-[#ff6e7f]";
+                const dayChange = asset.change > -100 ? asset.value * asset.change / (100 + asset.change) : 0;
 
                 return (
                   <motion.div key={asset.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.055, duration: 0.36, ease }}>
@@ -876,23 +951,14 @@ export function DashboardView({
                       </div>
                       <div className="max-w-[46%] shrink-0 text-right">
                         <p className="text-[14px] font-semibold tracking-[-0.025em] text-[#f2f3f4]">{balancesVisible ? currency.format(asset.value) : "••••"}</p>
-                        <p className={"mt-0.5 text-[10px] font-semibold " + changeClass}>{marketLoading ? "—" : formatPercent(asset.change)}</p>
+                        <p aria-label={marketLoading ? "Cotação em atualização" : `Variação em 24 horas: ${formatPercent(asset.change)}`} className={"mt-0.5 text-[10px] font-semibold tabular-nums " + changeClass}>{marketLoading ? "—" : balancesVisible ? (dayChange > 0 ? "+" : "") + currency.format(dayChange) : "••••"}</p>
                       </div>
                     </Link>
                   </motion.div>
                 );
               })}
               <div className="pt-5"><MemeRadar compact /></div>
-              <div className="my-4 grid grid-cols-2 gap-2">
-                <button type="button" onClick={()=>selectTab("activity")} className="group rounded-[18px] border border-white/[0.045] bg-[#151618] p-4 text-left transition hover:bg-[#202124]">
-                  <HistoryRoundedIcon sx={{fontSize:19}} className="text-[#b9aaf5]" />
-                  <p className="mt-3 text-xs font-semibold text-white/75">Histórico</p><p className="mt-1 text-[10px] text-white/40">{transactions.length} registros · filtros e CSV</p>
-                </button>
-                <Link href={transactions[0] ? `/dashboard/comprovante/${transactions[0].id}` : "/dashboard/nova-transacao"} className="rounded-[18px] border border-white/[0.045] bg-[#151618] p-4 transition hover:bg-[#202124]">
-                  <ReceiptLongRoundedIcon sx={{fontSize:19}} className="text-[#b8c7d4]" />
-                  <p className="mt-3 text-xs font-semibold text-white/75">{transactions[0] ? "Último comprovante" : "Primeiro registro"}</p><p className="mt-1 truncate text-[10px] text-white/40">{transactions[0] ? transactions[0].descricao + " · PDF disponível" : "Adicione uma receita ou despesa"}</p>
-                </Link>
-              </div>
+              {transactions[0] && <Link href={"/dashboard/comprovante/" + transactions[0].id} className="mt-5 flex min-w-0 items-center gap-2.5 border-t border-white/[0.065] px-1 py-4 text-[11px] transition hover:text-white"><ReceiptLongRoundedIcon sx={{ fontSize: 18 }} className="shrink-0 text-[#a79cbc]" /><span className="min-w-0 flex-1 truncate text-white/47">Última atividade · {transactions[0].destinatario || transactions[0].descricao}</span><span className="shrink-0 text-white/42">Ver recibo ↗</span></Link>}
               <CryptoMarket embedded />
             </motion.section>
           )}
@@ -959,14 +1025,15 @@ export function DashboardView({
 
           {dashboardTab === "insights" && (
             <motion.section key="insights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.28, ease }} className="mt-5">
-              <div className="flex items-end justify-between gap-3 px-1 pb-5"><div><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/35">CARTEIRA</p><h2 className="mt-1 text-[19px] font-semibold tracking-[-0.04em] text-white">{account.label}</h2></div><span className="text-[10px] text-[#b9aaf5]">Solana · demo</span></div>
+              <div className="flex items-center justify-between gap-3 px-1 pb-5"><div className="flex items-center gap-3"><AccountPortrait photo={accountPhoto} initial={account.avatar} className="h-14 w-14 text-lg" /><div><p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/35">CARTEIRA</p><h2 className="mt-1 text-[19px] font-semibold tracking-[-0.04em] text-white">{account.label}</h2><p className="mt-0.5 text-[10px] text-[#b9aaf5]">Solana · demo</p></div></div><button type="button" onClick={() => photoInputRef.current?.click()} aria-label="Alterar foto de perfil" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/[0.06] bg-[#17181b] text-white/65 transition hover:bg-[#24252a]"><AddAPhotoOutlinedIcon sx={{ fontSize: 18 }} /></button></div>
               <div className="rounded-[19px] border border-white/[0.045] bg-[#121315] px-4 py-5 sm:px-5">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/36">Endereço da conta</p>
                 <p className="mt-3 break-all font-mono text-[12px] leading-6 text-white/80">{account.address}</p>
                 <div className="mt-5 flex gap-2"><button type="button" onClick={copyAddress} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#25252b] px-3.5 text-[11px] font-semibold text-white/80 transition hover:bg-[#303037]"><ContentCopyRoundedIcon sx={{ fontSize: 16 }} />Copiar</button><button type="button" onClick={() => setModal("receive")} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#25252b] px-3.5 text-[11px] font-semibold text-white/80 transition hover:bg-[#303037]"><QrCodeScannerRoundedIcon sx={{ fontSize: 16 }} />Ver QR</button></div>
               </div>
               <p className="mt-3 px-1 text-[10px] leading-5 text-white/35">Endereço de demonstração. Esta conta não assina transações na rede Solana.</p>
-              <div className="mt-8 border-t border-white/[0.07]"><button type="button" onClick={() => selectTab("activity")} className="flex min-h-14 w-full items-center justify-between border-b border-white/[0.07] px-1 text-left text-[12px] font-medium text-white/72 transition hover:text-white"><span className="flex items-center gap-3"><HistoryRoundedIcon sx={{ fontSize: 18 }} className="text-[#b9aaf5]" />Histórico da carteira</span><ArrowOutwardRoundedIcon sx={{ fontSize: 17 }} /></button><Link href="/dashboard/cartao" className="flex min-h-14 items-center justify-between border-b border-white/[0.07] px-1 text-[12px] font-medium text-white/72 transition hover:text-white"><span className="flex items-center gap-3"><CreditCardRoundedIcon sx={{ fontSize: 18 }} className="text-[#b9aaf5]" />Cartão virtual</span><ArrowOutwardRoundedIcon sx={{ fontSize: 17 }} /></Link></div>
+              {profilePhotos[account.id] && <button type="button" onClick={restoreProfilePhoto} className="mt-2 px-1 text-[10px] font-medium text-white/45 underline underline-offset-4 transition hover:text-white">Restaurar foto padrão</button>}
+              <div className="mt-8 border-t border-white/[0.07]"><button type="button" onClick={() => selectTab("activity")} className="flex min-h-14 w-full items-center justify-between border-b border-white/[0.07] px-1 text-left text-[12px] font-medium text-white/72 transition hover:text-white"><span className="flex items-center gap-3"><HistoryRoundedIcon sx={{ fontSize: 18 }} className="text-[#b9aaf5]" />Histórico da carteira</span><ArrowOutwardRoundedIcon sx={{ fontSize: 17 }} /></button><Link href="/dashboard/cartao" className="flex min-h-14 items-center justify-between border-b border-white/[0.07] px-1 text-[12px] font-medium text-white/72 transition hover:text-white"><span className="flex items-center gap-3"><CreditCardOutlinedIcon sx={{ fontSize: 18 }} className="text-[#b9aaf5]" />Cartão virtual</span><ArrowOutwardRoundedIcon sx={{ fontSize: 17 }} /></Link></div>
             </motion.section>
           )}
         </AnimatePresence>
@@ -1137,6 +1204,19 @@ export function DashboardView({
                 <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/35">{sendMethod === "PIX" ? "Chave PIX" : "Endereço da carteira"}</span>
                 <input maxLength={180} value={sendAddress} onChange={(event) => { setSendAddress(event.target.value); setSendError(""); }} placeholder={sendMethod === "PIX" ? "CPF, e-mail, telefone ou chave aleatória" : "Cole o endereço da carteira"} className="mt-2 h-12 w-full rounded-[16px] border border-white/[0.07] bg-white/[0.04] px-4 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/20 focus:bg-white/[0.055]" />
               </label>
+
+              <div className="mt-3 border-b border-white/[0.055] pb-3">
+                <button type="button" aria-expanded={contactsOpen} onClick={() => setContactsOpen(!contactsOpen)} className="flex min-h-10 w-full items-center gap-2 text-left text-[11px] font-semibold text-[#c7c3db]"><ContactsOutlinedIcon sx={{ fontSize: 18 }} />Contatos salvos <span className="ml-auto text-[10px] font-normal text-white/34">{savedContacts.length} neste aparelho</span><KeyboardArrowDownRoundedIcon sx={{ fontSize: 17, transform: contactsOpen ? "rotate(180deg)" : "none", transition: "transform .2s ease" }} /></button>
+                <AnimatePresence initial={false}>{contactsOpen && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden"><div className="space-y-2 pt-2">
+                  {[...savedContacts].sort((a, b) => Number(b.pinned) - Number(a.pinned)).map((contact) => <div key={destinationKey(contact.method, contact.destination)} className="flex min-w-0 items-center gap-2 rounded-[13px] bg-[#18191c] p-2">
+                    <button type="button" onClick={() => { setSendRecipient(contact.name); setSendAddress(contact.destination); setSendMethod(contact.method); setSendError(""); }} className="flex min-w-0 flex-1 items-center gap-2 text-left"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#303037] text-[10px] font-semibold text-white/75">{initialsFor(contact.name)}</span><span className="min-w-0"><span className="block truncate text-[11px] font-semibold text-white/75">{contact.name}</span><span className="block truncate text-[9px] text-white/35">{contact.method} · {contact.destination}</span></span></button>
+                    <button type="button" onClick={() => toggleContactPin(contact)} aria-label={(contact.pinned ? "Desafixar " : "Fixar ") + contact.name} className={"grid h-8 w-8 shrink-0 place-items-center rounded-full " + (contact.pinned ? "text-[#d1bffa]" : "text-white/35")}>{contact.pinned ? <StarRoundedIcon sx={{ fontSize: 17 }} /> : <StarBorderRoundedIcon sx={{ fontSize: 17 }} />}</button>
+                    <button type="button" onClick={() => removeContact(contact)} aria-label={"Excluir " + contact.name} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/35 hover:text-[#f59aa5]"><DeleteOutlineRoundedIcon sx={{ fontSize: 17 }} /></button>
+                  </div>)}
+                  {savedContacts.length === 0 && <p className="py-2 text-[10px] text-white/38">Preencha nome e destino acima para salvar o primeiro contato.</p>}
+                  <button type="button" onClick={saveCurrentContact} className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-white/[0.07] bg-[#25252b] text-[10px] font-semibold text-white/70"><StarBorderRoundedIcon sx={{ fontSize: 16 }} />Salvar destinatário preenchido</button>
+                </div></motion.div>}</AnimatePresence>
+              </div>
 
               <label className="mt-3 block">
                 <div className="flex items-center justify-between"><span className="text-[10px] font-bold uppercase tracking-[0.13em] text-white/35">Valor</span><span className="text-[9px] text-white/24">Saldo {currency.format(accountBalance)}</span></div>
@@ -1378,7 +1458,7 @@ export function DashboardView({
 
       <ModalShell
         open={modal === "swap" || modal === "buy"}
-        title={modal === "buy" ? "Comprar cripto" : "Trocar moedas"}
+        title={modal === "buy" ? "Comprar cripto" : "Trade"}
         subtitle="Explore as cotações e revise sua simulação."
         onClose={() => setModal(null)}
       >

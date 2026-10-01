@@ -1,18 +1,19 @@
 import { getTransactions } from "@/lib/transactions";
 import { cashMovementCents } from "@/lib/card";
+import { filterActivities, type ActivityMethod, type ActivityType } from "@/lib/activity-filters";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
-  const query = (params.get("q") || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  const query = params.get("q") || "";
   const type = params.get("type") || "all";
+  const method = params.get("method") || "all";
   const cutoff = Number(params.get("since") || 0);
-  if (!["all","receita","despesa"].includes(type) || !Number.isFinite(cutoff) || cutoff < 0) return new Response("Filtro inválido.", {status:400});
-  const transactions = (await getTransactions()).filter(t => {
-    const haystack = [t.descricao,t.destinatario,t.identificador,t.mensagem,t.categoria,t.metodo].filter(Boolean).join(" ").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-    return (type==="all" || t.tipo===type) && new Date(t.criado_em).getTime() >= cutoff && haystack.includes(query);
-  });
+  const minAmount = Number(params.get("min") || 0);
+  const maxAmount = Number(params.get("max") || 0);
+  if (!["all","receita","despesa"].includes(type) || !["all","PIX","Carteira","Cartão","Outros"].includes(method) || !Number.isFinite(cutoff) || cutoff < 0 || !Number.isFinite(minAmount) || minAmount < 0 || !Number.isFinite(maxAmount) || maxAmount < 0 || (maxAmount > 0 && minAmount > maxAmount)) return new Response("Filtro inválido.", {status:400});
+  const transactions = filterActivities(await getTransactions(), { query, type: type as ActivityType, method: method as ActivityMethod, since: cutoff, minAmount, maxAmount });
   const cell = (value: unknown) => {
     let text = String(value ?? "");
     if (/^[=+@\-\t\r\n]/.test(text)) text = "'" + text;

@@ -2,6 +2,8 @@
 
 Aplicação acadêmica full-stack feita com Next.js App Router. Reúne resumo financeiro, transações, histórico, comprovantes em PDF, consulta de criptoativos e um cartão de crédito **demonstrativo**. A interface prioriza uso no celular, movimentos curtos e suporte à preferência do sistema por movimento reduzido.
 
+A foto padrão do perfil é uma fotografia de [Sebastian Schuster no Unsplash](https://unsplash.com/photos/minimalist-black-and-white-building-facade-with-windows-LD-M-bzJgNY), usada sob a [licença Unsplash](https://unsplash.com/license). O usuário pode substituí-la por uma foto JPG, PNG ou WebP; a imagem é recortada e salva somente no navegador. Contatos favoritos e alertas de preço também são preferências locais. Alertas são verificados nas atualizações enquanto a página estiver aberta e o token permanecer no feed, sem notificações em segundo plano.
+
 ## Executar
 
 Requer Node.js 22.18+ ou 24.
