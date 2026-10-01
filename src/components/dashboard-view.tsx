@@ -343,7 +343,7 @@ export function DashboardView({
   const recentRecipients = useMemo(() => {
     const grouped = new Map<string, { name: string; destination: string; method: SendMethod; initials: string; historyCount: number }>();
     for (const transaction of transactions) {
-      if (transaction.tipo !== "despesa" || !transaction.destinatario || !transaction.identificador) continue;
+      if (transaction.tipo !== "despesa" || (transaction.metodo !== "PIX" && transaction.metodo !== "Carteira") || !transaction.destinatario || !transaction.identificador) continue;
       const method = transaction.metodo === "Carteira" ? "Carteira" : "PIX";
       const key = destinationKey(method, transaction.identificador);
       const existing = grouped.get(key);
